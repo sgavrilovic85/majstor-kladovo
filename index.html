@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Majstor na terenu – Kladovo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:84px}
+header{background:var(--plava);color:#fff;text-align:center;padding:14px 12px 12px}
+header h1{margin:0;font-size:22px}
+header p{margin:4px 0 0;font-size:13px;color:#b9cdf5}
+.tabs{display:flex;background:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px #0002}
+.tabs button{flex:1;padding:13px 4px;border:0;background:none;font-size:14px;font-weight:600;color:var(--sv);border-bottom:3px solid transparent}
+.tabs button.on{color:var(--plava);border-color:var(--nar)}
+main{max-width:560px;margin:0 auto;padding:12px}
+.sek{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px}
+.sek h3{margin:0 0 10px;font-size:16px}
+.mreza{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.kat{position:relative;border:3px solid transparent;background:none;border-radius:16px;padding:0;text-align:center;font-weight:700;color:var(--tx);line-height:0}
+.kat img{width:100%;height:auto;display:block;border-radius:14px}
+.kat.on{border-color:var(--nar);box-shadow:0 0 0 2px #fff,0 3px 10px #f26a1b66}
+.kat.on::after{content:"✓";position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:var(--nar);color:#fff;font:700 18px/28px system-ui}
+.kat.ost{border:2px dashed #b9c2d6;background:#fff;padding:26px 4px;font-size:16px;line-height:1.3;align-self:stretch}
+.kat.ost span{display:block;font-size:34px}
+.hit{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.hit button{padding:12px 4px;border-radius:10px;border:2px solid #dde2ee;background:#fff;font-weight:600;font-size:13px}
+.hit button.on{border-color:var(--plava);background:#e9effc}
+.foto{display:block;width:100%;padding:16px;border:2px dashed var(--plava);border-radius:12px;background:#f5f8ff;color:var(--plava);font-size:17px;font-weight:700;text-align:center}
+#pre{display:none;width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:10px}
+input,textarea{width:100%;padding:12px;border:1px solid #cfd5e3;border-radius:10px;font-size:16px;font-family:inherit}
+textarea{min-height:80px;resize:vertical}
+.red{display:flex;gap:8px;margin-top:8px}
+.mali{flex:1;padding:11px;border-radius:10px;border:1px solid #cfd5e3;background:#fff;font-size:14px;font-weight:600}
+.dno{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 12px;display:flex;gap:8px;box-shadow:0 -2px 8px #0002;z-index:30}
+.dno button,.dno a{flex:1;padding:14px;border-radius:12px;border:0;font-size:16px;font-weight:700;text-align:center;text-decoration:none}
+#slanje{background:var(--nar);color:#fff;flex:2}
+.zovi{background:var(--zel);color:#fff}
+small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:center}
+#mapa{height:calc(100vh - 170px);min-height:340px;border-radius:14px}
+.st{display:flex;gap:10px;background:#fff;border-radius:14px;padding:10px;margin-bottom:10px}
+.st img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
+.st b{display:block}
+.bedz{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
+.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
+.pr{display:none}.pr.on{display:block}
+#ok{display:none;position:fixed;inset:0;background:#000a;z-index:50;align-items:center;justify-content:center;padding:20px}
+#ok div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px}
+#ok h2{color:var(--zel);margin:0 0 8px}
+#ok button{margin-top:14px;padding:12px 28px;border:0;border-radius:10px;background:var(--plava);color:#fff;font-size:16px;font-weight:700}
+</style>
+</head>
+<body>
+<!--
+SUPABASE SQL (pokreni jednom u SQL Editor):
+
+create table pozivi(
+ id bigint generated always as identity primary key,
+ created_at timestamptz default now(),
+ kategorija text, hitnost text, opis text, adresa text, telefon text,
+ lat double precision, lng double precision, foto_url text,
+ status text default 'Novo', zavrseno_at timestamptz);
+alter table pozivi enable row level security;
+create policy "svi salju" on pozivi for insert to anon with check (true);
+create view pozivi_javno as select id,created_at,kategorija,hitnost,adresa,lat,lng,foto_url,status,zavrseno_at from pozivi;
+grant select on pozivi_javno to anon;
+-- bucket "photos" (public) vec imas; dozvoli upload:
+create policy "upload foto" on storage.objects for insert to anon with check (bucket_id='photos');
+-->
+<header><h1>🛠️ Majstor na terenu</h1><p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p></header>
+<div class="tabs">
+ <button class="on" data-t="prijava">Pozovi majstora</button>
+ <button data-t="mapa">Mapa</button>
+ <button data-t="status">Status</button>
+</div>
+<main>
+<section id="prijava" class="pr on">
+ <div class="sek"><h3>1. Šta vam treba?</h3>
+  <div class="mreza" id="kats"></div></div>
+ <div class="sek"><h3>2. Uslikaj kvar</h3>
+  <label class="foto" for="fajl">📷 Uslikaj kvar</label>
+  <input type="file" id="fajl" accept="image/*" capture="environment" hidden>
+  <img id="pre" alt="Slika kvara"></div>
+ <div class="sek"><h3>3. Koliko je hitno?</h3>
+  <div class="hit" id="hit">
+   <button data-h="Hitno danas">🔴 Hitno danas</button>
+   <button data-h="Do sutra" class="on">🟠 Do sutra</button>
+   <button data-h="Nije hitno">🟢 Nije hitno</button></div></div>
+ <div class="sek"><h3>4. Opis kvara (opciono)</h3>
+  <textarea id="opis" placeholder="Npr. curi ventil u kupatilu, zagušen slivnik..."></textarea>
+  <div class="red"><button class="mali" id="mik">🎤 Izgovori opis</button></div></div>
+ <div class="sek"><h3>5. Gde?</h3>
+  <input id="adresa" placeholder="Adresa u Kladovu / zgrada, npr. 22. Septembar 46, stan 5">
+  <div class="red"><button class="mali" id="gps">📍 Moja lokacija</button></div>
+  <small class="n" id="gpsn"></small></div>
+ <div class="sek"><h3>6. Vaš telefon</h3>
+  <input id="tel" type="tel" inputmode="tel" placeholder="06x xxx xxxx"></div>
+ <small class="n">Majstor će vas nazvati u najkraćem roku.</small>
+</section>
+<section id="mapa-s" class="pr"><div id="mapa"></div></section>
+<section id="status" class="pr"><div id="lista"></div></section>
+</main>
+<div class="dno" id="dno">
+ <a class="zovi" id="zovi" href="tel:+381000000000">📞 Pozovi</a>
+ <button id="slanje">Pošalji poziv majstoru</button>
+</div>
+<div id="ok"><div><h2>✅ Poziv poslat!</h2><p>Javićemo vam se uskoro.</p><button onclick="this.closest('#ok').style.display='none'">U redu</button></div></div>
+
+<script>
+// ===== PODEŠAVANJA (popuni) =====
+const SUPABASE_URL = "";      // npr. https://xxxx.supabase.co
+const SUPABASE_KEY = "";      // anon public key
+const TELEFON = "+381000000000";   // broj za dugme Pozovi
+const MEJL = "sredikladovo@gmail.com"; // rezerva ako baza nije podešena
+// =================================
+const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
+let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
+const $=id=>document.getElementById(id);
+$("zovi").href="tel:"+TELEFON;
+const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+
+const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
+OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on")};
+KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="kartice/'+i+'.webp" alt="'+n+'">';
+ b.onclick=()=>{kat=n;document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));b.classList.add("on")};$("kats").appendChild(b)});
+$("kats").appendChild(OSTALO);
+$("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
+$("fajl").onchange=e=>{foto=e.target.files[0]||null;if(foto){$("pre").src=URL.createObjectURL(foto);$("pre").style.display="block"}};
+
+$("gps").onclick=()=>{$("gpsn").textContent="Tražim lokaciju...";
+ navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lng=p.coords.longitude;$("gpsn").textContent="📍 Lokacija snimljena";},
+ ()=>{$("gpsn").textContent="Nije moguće – upišite adresu."},{enableHighAccuracy:true,timeout:10000}):$("gpsn").textContent="Telefon ne podržava lokaciju.";};
+
+$("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
+ const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
+
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+ const t=b.dataset.t;document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
+ $(t==="mapa"?"mapa-s":t).classList.add("on");
+ $("dno").style.display=t==="prijava"?"flex":"none";
+ if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();});
+
+$("slanje").onclick=async()=>{
+ if(!kat)return alert("Izaberite šta vam treba (korak 1).");
+ if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
+ if(!$("adresa").value.trim()&&lat==null)return alert("Upišite adresu ili pritisnite Moja lokacija.");
+ const d={kategorija:kat,hitnost:hit,opis:$("opis").value.trim(),adresa:$("adresa").value.trim(),telefon:$("tel").value.trim(),lat,lng};
+ $("slanje").disabled=true;$("slanje").textContent="Šaljem...";
+ try{
+  if(sb){
+   if(foto){const ime=Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
+    const u=await sb.storage.from("photos").upload(ime,foto);
+    if(!u.error)d.foto_url=sb.storage.from("photos").getPublicUrl(ime).data.publicUrl;}
+   const r=await sb.from("pozivi").insert(d);if(r.error)throw r.error;
+   $("ok").style.display="flex";reset();
+  }else{
+   const tel=d.telefon,tx=`Kategorija: ${d.kategorija}\nHitnost: ${d.hitnost}\nOpis: ${d.opis}\nAdresa: ${d.adresa}\nTelefon: ${tel}`+(lat?`\nLokacija: https://maps.google.com/?q=${lat},${lng}`:"");
+   location.href=`mailto:${MEJL}?subject=${encodeURIComponent("Poziv majstoru: "+d.kategorija)}&body=${encodeURIComponent(tx)}`;
+  }
+ }catch(e){alert("Slanje nije uspelo. Pozovite direktno: "+TELEFON)}
+ $("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";};
+
+function reset(){kat=null;foto=null;lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
+ $("pre").style.display="none";$("gpsn").textContent="";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));}
+
+const fd=s=>s?new Date(s).toLocaleDateString("sr-RS",{day:"2-digit",month:"2-digit",year:"numeric"}):"";
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function ucitaj(){if(!sb)return[];const r=await sb.from("pozivi_javno").select("*").order("created_at",{ascending:false}).limit(100);return r.data||[]}
+let mp=null,sloj=null;
+async function crtajMapu(){
+ if(!mp){mp=L.map("mapa").setView([44.6086,22.6128],14);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.webp",{attribution:"© OpenStreetMap"}).addTo(mp);sloj=L.layerGroup().addTo(mp)}
+ setTimeout(()=>mp.invalidateSize(),50);sloj.clearLayers();
+ (await ucitaj()).filter(p=>p.lat!=null).forEach(p=>L.marker([p.lat,p.lng]).addTo(sloj)
+  .bindPopup(`<b>${esc(p.kategorija)}</b><br>${esc(p.status)}<br>${fd(p.created_at)}`+(p.foto_url?`<br><img src="${esc(p.foto_url)}" width="140">`:"")));}
+async function crtajStatus(){
+ const l=await ucitaj();
+ $("lista").innerHTML=l.length?l.map(p=>`<div class="st"><img src="${esc(p.foto_url||"")}" alt=""><div>
+  <b>${esc(p.kategorija)}</b>${esc(p.adresa)}<br><small>Prijavljeno: ${fd(p.created_at)}</small><br>
+  <span class="bedz ${esc((p.status||"Novo").replace(/[ š]/g,m=>m===" "?"-":"s"))}">${esc(p.status)}</span>
+  ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
+  `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
+</script>
+</body>
+</html>
