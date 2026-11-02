@@ -55,22 +55,6 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 </style>
 </head>
 <body>
-<!--
-SUPABASE SQL (pokreni jednom u SQL Editor):
-
-create table pozivi(
- id bigint generated always as identity primary key,
- created_at timestamptz default now(),
- kategorija text, hitnost text, opis text, adresa text, telefon text,
- lat double precision, lng double precision, foto_url text,
- status text default 'Novo', zavrseno_at timestamptz);
-alter table pozivi enable row level security;
-create policy "svi salju" on pozivi for insert to anon with check (true);
-create view pozivi_javno as select id,created_at,kategorija,hitnost,adresa,lat,lng,foto_url,status,zavrseno_at from pozivi;
-grant select on pozivi_javno to anon;
--- bucket "photos" (public) vec imas; dozvoli upload:
-create policy "upload foto" on storage.objects for insert to anon with check (bucket_id='photos');
--->
 <header><h1>🛠️ Majstor na terenu</h1><p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p></header>
 <div class="tabs">
  <button class="on" data-t="prijava">Pozovi majstora</button>
@@ -112,9 +96,10 @@ create policy "upload foto" on storage.objects for insert to anon with check (bu
 
 <script>
 // ===== PODEŠAVANJA (popuni) =====
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyZiA33IOfnfFeRA_DD2Pb30ThjUUe7xmVGjwjimfsRRGhPgthtrm6IR1n6OYmTJ387-Q/exec';
-const TELEFON = "+381638434412";   // broj za dugme Pozovi
-const MEJL = "majstornaterenu@gmail.com"; // rezerva ako baza nije podešena
+const SUPABASE_URL = "";      
+const SUPABASE_KEY = "";      
+const TELEFON = "+381000000000";   
+const MEJL = "majstornaterenu@gmail.com"; 
 // =================================
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
