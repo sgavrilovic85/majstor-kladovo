@@ -112,10 +112,9 @@ create policy "upload foto" on storage.objects for insert to anon with check (bu
 
 <script>
 // ===== PODEŠAVANJA (popuni) =====
-const SUPABASE_URL = "";      // npr. https://xxxx.supabase.co
-const SUPABASE_KEY = "";      // anon public key
-const TELEFON = "+381000000000";   // broj za dugme Pozovi
-const MEJL = "sredikladovo@gmail.com"; // rezerva ako baza nije podešena
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwJsUBys2JoLbWvHNw50VwUaZ7olJ1ccMy0GBJUpu9M17Tg6PFfvLoejDvY3s4r0ypL7Q/exec';
+const TELEFON = "+381638434412";   // broj za dugme Pozovi
+const MEJL = "majstornaterenu@gmail.com"; // rezerva ako baza nije podešena
 // =================================
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
