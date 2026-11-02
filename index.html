@@ -125,7 +125,7 @@ const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUP
 
 const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
 OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on")};
-KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="kartice/'+i+'.webp" alt="'+n+'">';
+KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="'+i+'.webp" alt="'+n+'">';
  b.onclick=()=>{kat=n;document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));b.classList.add("on")};$("kats").appendChild(b)});
 $("kats").appendChild(OSTALO);
 $("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
