@@ -263,11 +263,19 @@ async function dodajMajstora(e) {
   e.preventDefault();
   const ime = document.getElementById('m-ime').value;
   const telefon = document.getElementById('m-telefon').value;
-  const kategorija = document.getElementById('m-kategorija').value.toLowerCase().trim();
+  const katUnos = document.getElementById('m-kategorija').value.toLowerCase().trim();
   const prioritet = parseInt(document.getElementById('m-prioritet').value);
 
   if(!sb) return alert("Supabase nije povezan.");
-  const { error } = await sb.from('majstori').insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
+  
+  // Šaljemo "kategorije" kao niz (text[]) jer takva kolona postoji u bazi
+  const { error } = await sb.from('majstori').insert([{ 
+    ime, 
+    telefon, 
+    kategorije: [katUnos], 
+    prioritet, 
+    aktivan: true 
+  }]);
 
   if (error) {
     alert('Greška pri unosu majstora: ' + error.message);
@@ -275,6 +283,7 @@ async function dodajMajstora(e) {
     document.getElementById('add-majstor-form').reset();
     document.getElementById('m-prioritet').value = 1;
     ucitajMajstore();
+    alert('Majstor je uspešno sačuvan!');
   }
 }
 
