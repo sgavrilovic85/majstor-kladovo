@@ -2,304 +2,188 @@
 <html lang="sr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Majstor na terenu - Kladovo</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>
-  const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5"; 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-</script>
 <style>
-:root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
+:root{--plava:#1b3a7a;--nar:#f261b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:84px}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:80px}
 header{background:var(--plava);color:#fff;text-align:center;padding:14px 12px 12px}
 header h1{margin:0;font-size:22px}
 header p{margin:4px 0 0;font-size:13px;color:#b9cdf5}
 .tabs{display:flex;background:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px #0002}
-.tabs button{flex:1;padding:13px 4px;border:0;background:none;font-size:14px;font-weight:600;color:var(--sv);border-bottom:3px solid transparent}
-.tabs button.on{color:var(--plava);border-color:var(--nar)}
+.tabs button{flex:1;padding:13px 4px;border:0;background:none;font-size:14px;font-weight:600;color:var(--sv);border-bottom:3px solid transparent;cursor:pointer}
+.tabs button.on{color:var(--plava);border-color:var(--plava)}
 main{max-width:560px;margin:0 auto;padding:12px}
-.sek{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px}
+.sek{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #0001}
 .sek h3{margin:0 0 10px;font-size:16px}
-.mreza{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
-.kat{position:relative;border:3px solid transparent;background:none;border-radius:16px;padding:0;text-align:center;font-weight:700;color:var(--tx);line-height:0}
-.kat img{width:100%;height:auto;display:block;border-radius:14px}
-.kat.on{border-color:var(--nar);box-shadow:0 0 0 2px #fff,0 3px 10px #f26a1b66}
-.kat.on::after{content:"✓";position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:var(--nar);color:#fff;font:700 18px/28px system-ui}
-.kat.ost{border:2px dashed #b9c2d6;background:#fff;padding:26px 4px;font-size:16px;line-height:1.3;align-self:stretch}
-.kat.ost span{display:block;font-size:34px}
-.hit{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.hit button{padding:12px 4px;border-radius:10px;border:2px solid #dde2ee;background:#fff;font-weight:600;font-size:13px}
-.hit button.on{border-color:var(--plava);background:#e9effc}
-.foto{display:block;width:100%;padding:16px;border:2px dashed var(--plava);border-radius:12px;background:#f5f8ff;color:var(--plava);font-size:17px;font-weight:700;text-align:center}
-#pre{display:none;width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:10px}
-input,textarea{width:100%;padding:12px;border:1px solid #cfd5e3;border-radius:10px;font-size:16px;font-family:inherit}
-textarea{min-height:80px;resize:vertical}
-.red{display:flex;gap:8px;margin-top:8px}
-.mali{flex:1;padding:11px;border-radius:10px;border:1px solid #cfd5e3;background:#fff;font-size:14px;font-weight:600}
-.dno{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 12px;display:flex;gap:8px;box-shadow:0 -2px 8px #0002;z-index:30}
-.dno button,.dno a{flex:1;padding:14px;border-radius:12px;border:0;font-size:16px;font-weight:700;text-align:center;text-decoration:none}
-#slanje{background:var(--nar);color:#fff;flex:2}
-.zovi{background:var(--zel);color:#fff}
-small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:center}
-#mapa{height:calc(100vh - 170px);min-height:340px;border-radius:14px}
-.st{display:flex;gap:10px;background:#fff;border-radius:14px;padding:10px;margin-bottom:10px}
-.st img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
-.st b{display:block}
-.bedz{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
-.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
-.nap{background:#fff7e6;border:1px solid #f3d49a;border-radius:12px;padding:11px;font-size:14px;margin-bottom:12px}.Ponuda{background:#2563eb}
-.pr{display:none}.pr.on{display:block}
-#ok{display:none;position:fixed;inset:0;background:#000a;z-index:50;align-items:center;justify-content:center;padding:20px}
-#ok div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px}
-#ok h2{color:var(--zel);margin:0 0 8px}
-#ok button{margin-top:14px;padding:12px 28px;border:0;border-radius:10px;background:var(--plava);color:#fff;font-size:16px;font-weight:700}
+input,textarea,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-top:6px}
+button.glavno{width:100%;background:var(--nar);color:#fff;border:0;padding:14px;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px}
+.pr{display:none}
+.pr.on{display:block}
 </style>
 </head>
 <body>
-<!--
-SUPABASE SQL (pokreni jednom u SQL Editor):
 
-create table pozivi(
- id bigint generated always as identity primary key,
- created_at timestamptz default now(),
- kategorija text, hitnost text, opis text, adresa text, telefon text,
- lat double precision, lng double precision, foto_url text,
- status text default 'Novo', zavrseno_at timestamptz);
-alter table pozivi enable row level security;
-create policy "svi salju" on pozivi for insert to anon with check (true);
-create view pozivi_javno as select id,created_at,kategorija,hitnost,adresa,lat,lng,foto_url,status,zavrseno_at from pozivi;
-grant select on pozivi_javno to anon;
--- bucket "photos" (public) vec imas; dozvoli upload:
-create policy "upload foto" on storage.objects for insert to anon with check (bucket_id='photos');
--->
-<header><h1>🛠️ Majstor na terenu</h1><p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p></header>
+<header>
+  <h1>🛠️ Majstor na terenu</h1>
+  <p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p>
+</header>
+
 <div class="tabs">
- <button class="on" data-t="prijava">Pozovi majstora</button>
- <button data-t="mapa">Mapa</button>
- <button data-t="status">Status</button>
- <button data-t="admin">Majstori 🔒</button>
+  <button data-t="prijava" class="on">Pozovi majstora</button>
+  <button data-t="mapa">Mapa</button>
+  <button data-t="status">Status</button>
+  <button data-t="majstori">Majstori 🔒</button>
 </div>
+
 <main>
-<section id="prijava" class="pr on">
- <div class="nap">💶 <b>Izlazak majstora na teren: <span id="izl"></span> din</b> (ako je u pitanju samo izlazak). Cenu popravke majstor javlja po slici – vidite je u tabu <b>Status</b>.<span id="slob"></span></div>
- <div class="sek"><h3>1. Šta vam treba?</h3>
-  <div class="mreza" id="kats"></div></div>
- <div class="sek"><h3>2. Uslikaj kvar</h3>
-  <label class="foto" for="fajl">📷 Uslikaj kvar</label>
-  <input type="file" id="fajl" accept="image/*" capture="environment" hidden>
-  <img id="pre" alt="Slika kvara"></div>
- <div class="sek"><h3>3. Koliko je hitno?</h3>
-  <div class="hit" id="hit">
-   <button data-h="Hitno danas">🔴 Hitno danas</button>
-   <button data-h="Do sutra" class="on">🟠 Do sutra</button>
-   <button data-h="Nije hitno">🟢 Nije hitno</button></div></div>
- <div class="sek"><h3>4. Opis kvara (opciono)</h3>
-  <textarea id="opis" placeholder="Npr. curi ventil u kupatilu, zagušen slivnik..."></textarea>
-  <div class="red"><button class="mali" id="mik">🎤 Izgovori opis</button></div></div>
- <div class="sek"><h3>5. Gde?</h3>
-  <input id="adresa" placeholder="Adresa u Kladovu / zgrada, npr. 22. Septembar 46, stan 5">
-  <div class="red"><button class="mali" id="gps">📍 Moja lokacija</button></div>
-  <small class="n" id="gpsn"></small></div>
- <div class="sek"><h3>6. Vaš telefon</h3>
-  <input id="tel" type="tel" inputmode="tel" placeholder="06x xxx xxxx"></div>
- <small class="n">Majstor će vas nazvati u najkraćem roku.</small>
-</section>
-<section id="mapa-s" class="pr"><div id="mapa"></div></section>
-<section id="status" class="pr"><div id="lista"></div></section>
-<section id="admin" class="pr"><div class="sek">
- <h3>BAZA MAJSTORA</h3><div id="majstori-list"></div>
- <button class="mali" onclick="ucitajMajstore()" style="margin:10px 0 18px;width:100%">↻ OSVEŽI LISTU</button>
- <h3>DODAJ NOVOG MAJSTORA</h3>
- <input id="m-ime" placeholder="Ime i prezime" style="margin-bottom:8px">
- <input id="m-telefon" type="tel" placeholder="Telefon, npr. 0631234567" style="margin-bottom:8px">
- <b style="font-size:13px">KATEGORIJE (može više)</b><div id="m-kats" style="margin:6px 0 8px"></div>
- <b style="font-size:13px">PRIORITET (1 = glavni majstor, prvi dobija pozive)</b>
- <input id="m-prioritet" type="number" value="1" min="1" style="margin:6px 0 12px">
- <button class="mali" style="width:100%;background:var(--plava);color:#fff;padding:13px" onclick="dodajMajstora()">SAČUVAJ MAJSTORA</button>
-</div></section>
+  <!-- 1. PRIJAVA KVARA -->
+  <div id="prijava" class="pr on">
+    <div class="sek">
+      <h3>1. Šta vam treba?</h3>
+      <div id="kategorije-div"></div>
+    </div>
+    <div class="sek">
+      <h3>2. Opis kvara</h3>
+      <textarea id="opis" rows="3" placeholder="Npr. curi ventil u kupatilu..."></textarea>
+    </div>
+    <div class="sek">
+      <h3>3. Vaš telefon</h3>
+      <input type="text" id="tel" placeholder="0631234567">
+    </div>
+    <button class="glavno" id="slanje">POŠALJI POZIV MAJSTORU</button>
+  </div>
+
+  <!-- 2. MAPA -->
+  <div id="mapa-s" class="pr">
+    <div class="sek">
+      <h3>Aktivne lokacije i kvarovi</h3>
+      <div id="map" style="height:400px;border-radius:10px;"></div>
+    </div>
+  </div>
+
+  <!-- 3. STATUS -->
+  <div id="status" class="pr">
+    <div class="sek">
+      <h3>Status vašeg poziva</h3>
+      <div id="status-sadrzaj">Unesite telefon da proverite status.</div>
+    </div>
+  </div>
+
+  <!-- 4. MAJSTORI (ADMIN BAZA) -->
+  <div id="majstori" class="pr">
+    <div class="sek">
+      <h3>BAZA MAJSTORA</h3>
+      <button onclick="ucitajMajstore()" style="width:100%;margin-bottom:15px;padding:10px;background:#e2e8f0;border:0;border-radius:8px;font-weight:bold;cursor:pointer">🔄 OSVEŽI LISTU</button>
+      <div id="majstori-list">Učitavanje...</div>
+      
+      <hr style="margin:20px 0;border:0;border-top:1px solid #eee">
+      
+      <h3>DODAJ NOVOG MAJSTORA</h3>
+      <input type="text" id="m-ime" placeholder="Ime i prezime">
+      <input type="text" id="m-telefon" placeholder="Telefon, npr. 0631234567">
+      <div id="m-kats" style="margin:10px 0"></div>
+      <input type="number" id="m-prioritet" value="1" min="1">
+      <button onclick="dodajMajstora()" style="width:100%;margin-top:10px;background:var(--plava);color:#fff;border:0;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer">SAČUVAJ MAJSTORA</button>
+    </div>
+  </div>
 </main>
-<div class="dno" id="dno">
- <a class="zovi" id="zovi" href="tel:+381000000000">📞 Pozovi</a>
- <button id="slanje">Pošalji poziv majstoru</button>
-</div>
-<div id="ok"><div><h2>✅ Poziv poslat!</h2><p>Javićemo vam se uskoro.</p><button onclick="this.closest('#ok').style.display='none'">U redu</button></div></div>
 
 <script>
-// ===== PODEŠAVANJA (popuni) =====
 const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
-const TELEFON = "+381638434412";
-const IZLAZAK = 3000;   // cena samo izlaska majstora na teren (din)   // broj za dugme Pozovi
-const MEJL = "sredikladovo@gmail.com"; // rezerva ako baza nije podešena
-// =================================
-const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
-let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
-const $=id=>document.getElementById(id);
-$("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
-const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
-OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on");pokaziSlob()};
-KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="'+i+'.webp" alt="'+n+'">';
- b.onclick=()=>{kat=n;document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));b.classList.add("on");pokaziSlob()};$("kats").appendChild(b)});
-$("kats").appendChild(OSTALO);
-$("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
-$("fajl").onchange=e=>{foto=e.target.files[0]||null;if(foto){$("pre").src=URL.createObjectURL(foto);$("pre").style.display="block"}};
+const $ = id => document.getElementById(id);
+const esc = s => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-$("gps").onclick=()=>{$("gpsn").textContent="Tražim lokaciju...";
- navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lng=p.coords.longitude;$("gpsn").textContent="📍 Lokacija snimljena";},
- ()=>{$("gpsn").textContent="Nije moguće – upišite adresu."},{enableHighAccuracy:true,timeout:10000}):$("gpsn").textContent="Telefon ne podržava lokaciju.";};
+const KATS = [["Vodoinstalater","🚰"],["Električar","⚡"],["Grejanje / Klima","🔥"],["Čišćenje","🧹"],["Limar","🏠"],["Lift","🛗"],["Pomoć u kući","🧹"],["Keramičar","🧱"],["Moler","🎨"],["Bašta / Dvorište","🌳"],["Građevinar","🏗️"]];
+let kat = "";
+let ADMIN = "";
 
-$("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
- const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
+// Inicijalizacija kategorija na formi
+$("kategorije-div").innerHTML = KATS.map(([k,i]) => `<button onclick="izaberiKat('${k}',this)" style="margin:4px;padding:8px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:20px;cursor:pointer">${i} ${k}</button>`).join("");
+$("m-kats").innerHTML = KATS.map(([k]) => `<label style="display:inline-block;margin:4px 8px"><input type="checkbox" value="${k}"> ${k}</label>`).join("");
 
-let ADMIN="";
+function izaberiKat(k, btn) {
+  document.querySelectorAll("#kategorije-div button").forEach(b => b.style.background = "#fff");
+  btn.style.background = "#e2e8f0";
+  kat = k;
+}
+
+// Upravljanje tabovima i PIN-om
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
     const t = b.dataset.t;
+    if(t === "majstori" && !ADMIN){
+        const pin = prompt("Admin PIN:");
+        if(!pin) return;
+        ADMIN = pin.trim();
+    }
     document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-    document.querySelectorAll(".pr").forEach(p => p.style.display = "none");
+    document.querySelectorAll(".pr").forEach(p => p.classList.remove("on"));
     
-    const aktivni = $(t === "mapa" ? "mapa-s" : t);
-    if (aktivni) aktivni.style.display = "block";
+    const aktivni = $(t);
+    if(aktivni) aktivni.classList.add("on");
     
-    $("dno").style.display = t === "prijava" ? "flex" : "none";
-    
-    if (t === "mapa") crtajMapu();
-    if (t === "status") crtajStatus();
-    if (t === "majstori" || t === "admin") ucitajMajstore();
+    if(t === "mapa") crtajMapu();
+    if(t === "status") crtajStatus();
+    if(t === "majstori") ucitajMajstore();
 });
-$("slanje").onclick=async()=>{
- if(!kat)return alert("Izaberite šta vam treba (korak 1).");
- if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
- if(!$("adresa").value.trim()&&lat==null)return alert("Upišite adresu ili pritisnite Moja lokacija.");
- const d={kategorija:kat,hitnost:hit,opis:$("opis").value.trim(),adresa:$("adresa").value.trim(),telefon:$("tel").value.trim(),lat,lng};
- $("slanje").disabled=true;$("slanje").textContent="Šaljem...";
- try{
-  if(sb){
-   if(foto){const ime=Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
-    const u=await sb.storage.from("photos").upload(ime,foto);
-    if(!u.error)d.foto_url=sb.storage.from("photos").getPublicUrl(ime).data.publicUrl;}
-   const r=await sb.from("pozivi").insert(d);if(r.error)throw r.error;
-   $("ok").style.display="flex";reset();
-  }else{
-   const tel=d.telefon,tx=`Kategorija: ${d.kategorija}\nHitnost: ${d.hitnost}\nOpis: ${d.opis}\nAdresa: ${d.adresa}\nTelefon: ${tel}`+(lat?`\nLokacija: https://maps.google.com/?q=${lat},${lng}`:"");
-   location.href=`mailto:${MEJL}?subject=${encodeURIComponent("Poziv majstoru: "+d.kategorija)}&body=${encodeURIComponent(tx)}`;
-  }
- }catch(e){alert("Slanje nije uspelo. Pozovite direktno: "+TELEFON)}
- $("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";};
 
-function reset(){kat=null;foto=null;lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
- $("pre").style.display="none";$("gpsn").textContent="";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));}
-
-let SLOB={};
-if(sb)sb.from("slobodno_po_kat").select("*").then(r=>(r.data||[]).forEach(x=>SLOB[x.kategorija]=x.datum));
-function pokaziSlob(){const d=SLOB[kat];$("slob").innerHTML=d?"<br>📅 Najbliži slobodan majstor: <b>"+fd(d)+"</b>":""}
-const fd=s=>s?new Date(s).toLocaleDateString("sr-RS",{day:"2-digit",month:"2-digit",year:"numeric"}):"";
-const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-async function ucitaj(){if(!sb)return[];const r=await sb.from("pozivi_javno").select("*").order("created_at",{ascending:false}).limit(100);return r.data||[]}
-let mp=null,sloj=null;
-async function crtajMapu(){
- if(!mp){mp=L.map("mapa").setView([44.6086,22.6128],14);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.webp",{attribution:"© OpenStreetMap"}).addTo(mp);sloj=L.layerGroup().addTo(mp)}
- setTimeout(()=>mp.invalidateSize(),50);sloj.clearLayers();
- (await ucitaj()).filter(p=>p.lat!=null).forEach(p=>L.marker([p.lat,p.lng]).addTo(sloj)
-  .bindPopup(`<b>${esc(p.kategorija)}</b><br>${esc(p.status)}<br>${fd(p.created_at)}`+(p.foto_url?`<br><img src="${esc(p.foto_url)}" width="140">`:"")));}
-async function crtajStatus(){
- const l=await ucitaj();
- $("lista").innerHTML=l.length?l.map(p=>`<div class="st"><img src="${esc(p.foto_url||"")}" alt=""><div>
-  <b>${esc(p.kategorija)}</b>${esc(p.adresa)}<br><small>Prijavljeno: ${fd(p.created_at)}</small><br>
-  ${p.cena?`<b style="color:#1b3a7a">Cena: ${Number(p.cena).toLocaleString("sr-RS")} din</b> – ${esc(p.majstor)}${p.termin?", termin "+fd(p.termin):""}<br><small>${esc(p.ponuda_opis)}</small><br>`:""}
-  <span class="bedz ${esc((p.status||"Novo").replace(/[ š]/g,m=>m===" "?"-":"s"))}">${esc(p.status)}</span>
-  ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
-  `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
-
-// ===== ADMIN: majstori (PIN se proverava u bazi) =====
-$("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
+// RPC Funkcije za Majstore
 async function ucitajMajstore() {
   const el = $("majstori-list");
-  if (!el) return;
+  if(!el) return;
   el.textContent = "Učitavanje...";
   
-  try {
-    const { data, error } = await sb
-      .from('majstori')
-      .select('*')
-      .order('id', { ascending: true });
-      
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      el.innerHTML = "<p>Nema unetih majstora.</p>";
-      return;
-    }
-    
-    el.innerHTML = data.map(m => `
-      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
-        <b>${esc(m.ime)}</b><br>
-        <small>Kategorije: ${esc(Array.isArray(m.kategorije) ? m.kategorije.join(", ") : m.kategorije)}</small><br>
-        📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b><br>
-        <button class="mali" style="margin-top:5px;background:#e53e3e;color:#fff;border:0;padding:5px 10px;border-radius:5px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button>
-      </div>
-    `).join("");
-    
-  } catch (err) {
-    el.innerHTML = `<b style="color:#c00">Greška: ${err.message}</b>`;
+  const { data, error } = await sb.rpc("a_majstori", { p_admin: ADMIN });
+  if(error || (data && data.error)) {
+    el.innerHTML = `<b style="color:#c00">Pogrešan PIN ili greška u konekciji.</b>`;
+    ADMIN = "";
+    return;
   }
+  
+  el.innerHTML = (data || []).map(m => `
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
+      <b>${esc(m.ime)} ${m.prioritet == 1 ? "⭐" : ""}</b> <small>(prioritet ${esc(m.prioritet)})</small><br>
+      <small>${esc((m.kategorije || []).join(", ")) || "bez kategorija"}</small><br>
+      📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b><br>
+      <button style="margin-top:8px;background:#ef4444;color:#fff;border:0;padding:5px 12px;border-radius:6px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button>
+    </div>
+  `).join("");
 }
 
 async function dodajMajstora() {
   const ime = $("m-ime").value.trim();
   const tel = $("m-telefon").value.trim();
+  const pr = parseInt($("m-prioritet").value) || 1;
   const kk = [...document.querySelectorAll("#m-kats input:checked")].map(x => x.value);
   
-  if (!ime || !tel || !kk.length) {
-    return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
-  }
+  if(!ime || !tel || !kk.length) return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
   
-  const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+  const { data, error } = await sb.rpc("a_dodaj", { p_admin: ADMIN, p_ime: ime, p_telefon: tel, p_kat: kk, p_prioritet: pr });
+  if(error) return alert("Greška: " + error.message);
   
-  try {
-    const { error } = await sb
-      .from('majstori')
-      .insert([{
-        ime: ime,
-        telefon: tel,
-        kategorije: kk,
-        pin: randomPin
-      }]);
-      
-    if (error) throw error;
-    
-    alert("Majstor uspešno sačuvan! Njegov PIN: " + randomPin);
-    $("m-ime").value = "";
-    $("m-telefon").value = "";
-    document.querySelectorAll("#m-kats input").forEach(x => x.checked = false);
-    ucitajMajstore();
-    
-  } catch (err) {
-    alert("Greška pri čuvanju: " + err.message);
-  }
+  alert("Majstor uspešno dodat! Njegov PIN: " + data);
+  $("m-ime").value = "";
+  $("m-telefon").value = "";
+  document.querySelectorAll("#m-kats input").forEach(x => x.checked = false);
+  ucitajMajstore();
 }
 
 async function obrisiMajstora(id) {
-  if (!confirm("Da li sigurno želiš da obrišeš majstora?")) return;
-  
-  try {
-    const { error } = await sb
-      .from('majstori')
-      .delete()
-      .eq('id', id);
-      
-    if (error) throw error;
-    ucitajMajstore();
-    
-  } catch (err) {
-    alert("Greška pri brisanju: " + err.message);
-  }
+  if(!confirm("Da li sigurno želiš da obrišeš majstora?")) return;
+  const { error } = await sb.rpc("a_obrisi", { p_admin: ADMIN, p_id: id });
+  if(error) return alert("Greška pri brisanju");
+  ucitajMajstore();
 }
+
+function crtajMapu() {}
+function crtajStatus() {}
+</script>
+</body>
+</html>
