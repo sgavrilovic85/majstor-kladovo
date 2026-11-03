@@ -160,14 +160,20 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
 let ADMIN="";
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
- const t=b.dataset.t;
- if(t==="admin"&&!ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim()}
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
- $(t==="mapa"?"mapa-s":t).classList.add("on");
- $("dno").style.display=t==="prijava"?"flex":"none";
- if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin")ucitajMajstore();});
-
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+    const t = b.dataset.t;
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+    document.querySelectorAll(".pr").forEach(p => p.style.display = "none");
+    
+    const aktivni = $(t === "mapa" ? "mapa-s" : t);
+    if (aktivni) aktivni.style.display = "block";
+    
+    $("dno").style.display = t === "prijava" ? "flex" : "none";
+    
+    if (t === "mapa") crtajMapu();
+    if (t === "status") crtajStatus();
+    if (t === "majstori" || t === "admin") ucitajMajstore();
+});
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
  if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
