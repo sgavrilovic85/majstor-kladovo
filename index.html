@@ -188,9 +188,10 @@
     }
 
     // Inicijalizacija Supabase veze
-    const supabaseUrl = 'https://ulbqtvdcepkgawcdfqud.supabase.co';
-    const supabaseKey = 'sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5'; 
-    const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = 'https://ulbqtvdcepkgawcdfqud.supabase.co';
+const supabaseKey = 'sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5';
+const { createClient } = window.supabase;
+const _supabase = createClient(supabaseUrl, supabaseKey);
     async function sacuvajMajstora() {
         const ime = document.getElementById('ime').value.trim();
         const telefon = document.getElementById('telefon').value.trim();
