@@ -4,25 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Majstor na terenu - Kladovo</title>
-    <!-- Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 0; color: #333; }
         header { background: #1a365d; color: white; padding: 15px; text-align: center; }
         .nav-tabs { display: flex; background: #fff; border-bottom: 2px solid #cbd5e0; overflow-x: auto; }
         .tab-btn { flex: 1; padding: 12px 10px; text-align: center; background: none; border: none; font-weight: bold; cursor: pointer; color: #4a5568; white-space: nowrap; }
         .tab-btn.active { border-bottom: 4px solid #dd6b20; color: #1a365d; }
-        .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 80px; }
+        .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .section { display: none; }
         .section.active { display: block; }
         h2 { color: #1a365d; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 18px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; background: #fff; }
-        .btn-action { background: #2b6cb0; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-action:hover { background: #2c5282; }
-        .error { color: #e53e3e; font-weight: bold; text-align: center; margin-bottom: 10px; }
-        .success { color: #38a169; font-weight: bold; text-align: center; margin-bottom: 10px; }
         
         /* Grid kategorija sa čvrstim dimenzijama da nema preklapanja */
         .grid-kategorije { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
@@ -41,8 +32,7 @@
 <div class="nav-tabs">
     <button class="tab-btn active" onclick="otvoriTab(event, 'tab-pozovi')">Pozovi majstora</button>
     <button class="tab-btn" onclick="otvoriTab(event, 'tab-mapa')">Mapa</button>
-    <button class="tab-btn" onclick="proveriPinIskoristiTab(event, 'tab-status')">Status</button>
-    <button class="tab-btn" onclick="proveriPinIskoristiTab(event, 'tab-majstori')">Majstori 🔒</button>
+    <button class="tab-btn" onclick="otvoriTab(event, 'tab-status')">Status</button>
 </div>
 
 <div class="container">
@@ -88,103 +78,18 @@
         <h2>Status poziva</h2>
         <p>Pregled statusa posatih poziva.</p>
     </div>
-
-    <!-- TAB 4: MAJSTORI (Zaštićeno PIN-om) -->
-    <div id="tab-majstori" class="section">
-        <h2>BAZA MAJSTORA</h2>
-        <div id="poruka"></div>
-
-        <div class="form-group" style="margin-top: 15px;">
-            <label>IME I PREZIME</label>
-            <input type="text" id="ime" placeholder="npr. Petar Petrović">
-        </div>
-
-        <div class="form-group">
-            <label>TELEFON</label>
-            <input type="text" id="telefon" placeholder="0631234567">
-        </div>
-
-        <div class="form-group">
-            <label>KATEGORIJA</label>
-            <select id="kategorija">
-                <option value="vodoinstalater">Vodoinstalater</option>
-                <option value="elektricar">Električar</option>
-                <option value="grejanje">Grejanje / Klima</option>
-                <option value="pomoc">Pomoć u kući</option>
-                <option value="limar">Limar</option>
-                <option value="lift">Lift servis</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>PRIORITET (1 = Glavni majstor)</label>
-            <input type="number" id="prioritet" value="1">
-        </div>
-
-        <button class="btn-action" onclick="sacuvajMajstora()">SAČUVAJ MAJSTORA</button>
-    </div>
 </div>
 
 <script>
     function otvoriTab(evt, tabNaziv) {
-        sakrijSveSekcije();
-        document.getElementById(tabNaziv).classList.add('active');
-        
-        const dugmadi = document.getElementsByClassName('tab-btn');
-        for (let d of dugmadi) d.classList.remove('active');
-        evt.currentTarget.classList.add('active');
-    }
-
-    function proveriPinIskoristiTab(evt, tabNaziv) {
-        const pin = prompt("Unesi administracioni PIN:");
-        if (pin === "2801") {
-            sakrijSveSekcije();
-            document.getElementById(tabNaziv).classList.add('active');
-            
-            const dugmadi = document.getElementsByClassName('tab-btn');
-            for (let d of dugmadi) d.classList.remove('active');
-            evt.currentTarget.classList.add('active');
-        } else {
-            alert("Pogrešan PIN!");
-        }
-    }
-
-    function sakrijSveSekcije() {
         const sekcije = document.getElementsByClassName('section');
         for (let s of sekcije) s.classList.remove('active');
-    }
 
-    // ⚠️ OVDE UPIŠI SVOJ PRAVI SUPABASE ANON KLJUČ UMESTO TEKSTA ISPOD ⚠️
-    const supabaseUrl = 'https://ulbqtvdcepkgawcdfqud.supabase.co';
-    const supabaseKey = 'OVDE_UBACI_SVOJ_PRAVI_SUPABASE_ANON_KLJUC'; 
-    
-    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const dugmadi = document.getElementsByClassName('tab-btn');
+        for (let d of dugmadi) d.classList.remove('active');
 
-    async function sacuvajMajstora() {
-        const ime = document.getElementById('ime').value.trim();
-        const telefon = document.getElementById('telefon').value.trim();
-        const kategorija = document.getElementById('kategorija').value;
-        const prioritet = parseInt(document.getElementById('prioritet').value) || 1;
-        const porukaDiv = document.getElementById('poruka');
-
-        if (!ime || !telefon) {
-            porukaDiv.innerHTML = '<div class="error">Molimo popunite ime i telefon!</div>';
-            return;
-        }
-
-        try {
-            const { error } = await _supabase
-                .from('majstori')
-                .insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
-
-            if (error) throw error;
-
-            porukaDiv.innerHTML = '<div class="success">Majstor je uspešno sačuvan!</div>';
-            document.getElementById('ime').value = '';
-            document.getElementById('telefon').value = '';
-        } catch (err) {
-            porukaDiv.innerHTML = `<div class="error">Greška pri upisu: ${err.message}</div>`;
-        }
+        document.getElementById(tabNaziv).classList.add('active');
+        evt.currentTarget.classList.add('active');
     }
 </script>
 
