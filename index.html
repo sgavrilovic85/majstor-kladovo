@@ -251,7 +251,7 @@ async function ucitajMajstore() {
     item.innerHTML = `
       <div>
         <strong style="text-transform:uppercase;">${esc(m.ime)} ${m.prioritet === 1 ? '⭐ (Glavni)' : ''}</strong>
-        <div style="font-size:13px; color:#718096; margin-top:2px;">${esc(m.kategorija || '')} • ${esc(m.telefon)}</div>
+        <div style="font-size:13px; color:#718096; margin-top:2px;">${esc((m.kategorije || []).join(", "))} • ${esc(m.telefon)}</div>
       </div>
       <button onclick="obrisiMajstora(${m.id})" style="background:#e53e3e; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">Obriši</button>
     `;
@@ -268,13 +268,17 @@ async function dodajMajstora(e) {
 
   if(!sb) return alert("Supabase nije povezan.");
   
-  // Šaljemo "kategorije" kao niz (text[]) jer takva kolona postoji u bazi
+  const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Šaljemo "kategorije" kao niz (text[]) i dodajemo "pin" jer ga baza zahteva
   const { error } = await sb.from('majstori').insert([{ 
     ime, 
     telefon, 
     kategorije: [katUnos], 
     prioritet, 
-    aktivan: true 
+    aktivan: true,
+    pin: randomPin,
+    cenovnik: []
   }]);
 
   if (error) {
