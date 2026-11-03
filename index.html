@@ -37,7 +37,7 @@ button.glavno{width:100%;background:var(--nar);color:#fff;border:0;padding:14px;
   <button data-t="prijava" class="on">Pozovi majstora</button>
   <button data-t="mapa">Mapa</button>
   <button data-t="status">Status</button>
-  <button data-t="majstori">Majstori 🔒</button>
+  <button data-t="majstori">Majstori</button>
 </div>
 
 <main>
@@ -74,7 +74,7 @@ button.glavno{width:100%;background:var(--nar);color:#fff;border:0;padding:14px;
     </div>
   </div>
 
-  <!-- 4. MAJSTORI (ADMIN BAZA) -->
+  <!-- 4. MAJSTORI (DIREKTNA BAZA) -->
   <div id="majstori" class="pr">
     <div class="sek">
       <h3>BAZA MAJSTORA</h3>
@@ -87,7 +87,6 @@ button.glavno{width:100%;background:var(--nar);color:#fff;border:0;padding:14px;
       <input type="text" id="m-ime" placeholder="Ime i prezime">
       <input type="text" id="m-telefon" placeholder="Telefon, npr. 0631234567">
       <div id="m-kats" style="margin:10px 0"></div>
-      <input type="number" id="m-prioritet" value="1" min="1">
       <button onclick="dodajMajstora()" style="width:100%;margin-top:10px;background:var(--plava);color:#fff;border:0;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer">SAČUVAJ MAJSTORA</button>
     </div>
   </div>
@@ -103,7 +102,6 @@ const esc = s => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
 
 const KATS = [["Vodoinstalater","🚰"],["Električar","⚡"],["Grejanje / Klima","🔥"],["Čišćenje","🧹"],["Limar","🏠"],["Lift","🛗"],["Pomoć u kući","🧹"],["Keramičar","🧱"],["Moler","🎨"],["Bašta / Dvorište","🌳"],["Građevinar","🏗️"]];
 let kat = "";
-let ADMIN = "";
 
 // Inicijalizacija kategorija na formi
 $("kategorije-div").innerHTML = KATS.map(([k,i]) => `<button onclick="izaberiKat('${k}',this)" style="margin:4px;padding:8px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:20px;cursor:pointer">${i} ${k}</button>`).join("");
@@ -115,18 +113,13 @@ function izaberiKat(k, btn) {
   kat = k;
 }
 
-// Upravljanje tabovima i PIN-om
+// Upravljanje tabovima bez PIN-a
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
     const t = b.dataset.t;
-    if(t === "majstori" && !ADMIN){
-        const pin = prompt("Admin PIN:");
-        if(!pin) return;
-        ADMIN = pin.trim();
-    }
     document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
     document.querySelectorAll(".pr").forEach(p => p.classList.remove("on"));
     
-    const aktivni = $(t);
+    const aktivni = $(t === "mapa" ? "mapa-s" : t);
     if(aktivni) aktivni.classList.add("on");
     
     if(t === "mapa") crtajMapu();
@@ -134,24 +127,28 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
     if(t === "majstori") ucitajMajstore();
 });
 
-// RPC Funkcije za Majstore
+// Direktne funkcije ka tabeli 'majstori' (bez RPC i PIN grešaka)
 async function ucitajMajstore() {
   const el = $("majstori-list");
   if(!el) return;
   el.textContent = "Učitavanje...";
   
-  const { data, error } = await sb.rpc("a_majstori", { p_admin: ADMIN });
-  if(error || (data && data.error)) {
-    el.innerHTML = `<b style="color:#c00">Pogrešan PIN ili greška u konekciji.</b>`;
-    ADMIN = "";
+  const { data, error } = await sb.from('majstori').select('*').order('id', { ascending: true });
+  if(error) {
+    el.innerHTML = `<b style="color:#c00">Greška: ${error.message}</b>`;
     return;
   }
   
-  el.innerHTML = (data || []).map(m => `
+  if(!data || data.length === 0) {
+    el.innerHTML = "<p>Nema unetih majstora.</p>";
+    return;
+  }
+  
+  el.innerHTML = data.map(m => `
     <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
-      <b>${esc(m.ime)} ${m.prioritet == 1 ? "⭐" : ""}</b> <small>(prioritet ${esc(m.prioritet)})</small><br>
-      <small>${esc((m.kategorije || []).join(", ")) || "bez kategorija"}</small><br>
-      📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b><br>
+      <b>${esc(m.ime)}</b><br>
+      <small>Kategorije: ${esc(Array.isArray(m.kategorije) ? m.kategorije.join(", ") : m.kategorije)}</small><br>
+      📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin || 'N/A')}</b><br>
       <button style="margin-top:8px;background:#ef4444;color:#fff;border:0;padding:5px 12px;border-radius:6px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button>
     </div>
   `).join("");
@@ -160,15 +157,22 @@ async function ucitajMajstore() {
 async function dodajMajstora() {
   const ime = $("m-ime").value.trim();
   const tel = $("m-telefon").value.trim();
-  const pr = parseInt($("m-prioritet").value) || 1;
   const kk = [...document.querySelectorAll("#m-kats input:checked")].map(x => x.value);
   
   if(!ime || !tel || !kk.length) return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
   
-  const { data, error } = await sb.rpc("a_dodaj", { p_admin: ADMIN, p_ime: ime, p_telefon: tel, p_kat: kk, p_prioritet: pr });
-  if(error) return alert("Greška: " + error.message);
+  const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
   
-  alert("Majstor uspešno dodat! Njegov PIN: " + data);
+  const { error } = await sb.from('majstori').insert([{
+    ime: ime,
+    telefon: tel,
+    kategorije: kk,
+    pin: randomPin
+  }]);
+  
+  if(error) return alert("Greška pri čuvanju: " + error.message);
+  
+  alert("Majstor uspešno sačuvan! PIN: " + randomPin);
   $("m-ime").value = "";
   $("m-telefon").value = "";
   document.querySelectorAll("#m-kats input").forEach(x => x.checked = false);
@@ -177,8 +181,8 @@ async function dodajMajstora() {
 
 async function obrisiMajstora(id) {
   if(!confirm("Da li sigurno želiš da obrišeš majstora?")) return;
-  const { error } = await sb.rpc("a_obrisi", { p_admin: ADMIN, p_id: id });
-  if(error) return alert("Greška pri brisanju");
+  const { error } = await sb.from('majstori').delete().eq('id', id);
+  if(error) return alert("Greška pri brisanju: " + error.message);
   ucitajMajstore();
 }
 
