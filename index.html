@@ -154,10 +154,10 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
-let ADMIN="";
+let ADMIN = localStorage.getItem("admin_pin") || "654321";
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
- if(t==="admin"&&!ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim()}
+ if((t==="admin" || t==="majstori") && !ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim();localStorage.setItem("admin_pin", ADMIN);}
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
  $("dno").style.display=t==="prijava"?"flex":"none";
