@@ -41,6 +41,7 @@ textarea{min-height:80px;resize:vertical}
 #slanje{background:var(--nar);color:#fff;flex:2}
 .zovi{background:var(--zel);color:#fff}
 small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:center}
+.napomena-teren{background:#fff3cd;color:#856404;padding:10px;border-radius:8px;font-size:13px;margin-top:8px;text-align:center;font-weight:600;border:1px solid #ffeeba;}
 #mapa{height:calc(100vh - 170px);min-height:340px;border-radius:14px}
 .st{display:flex;gap:10px;background:#fff;border-radius:14px;padding:10px;margin-bottom:10px}
 .st img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
@@ -65,10 +66,12 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 <section id="prijava" class="pr on">
  <div class="sek"><h3>1. Šta vam treba?</h3>
   <div class="mreza" id="kats"></div></div>
- <div class="sek"><h3>2. Uslikaj kvar</h3>
+ <div class="sek"><h3>2. Uslikaj kvar (Za procenu cene)</h3>
   <label class="foto" for="fajl">📷 Uslikaj kvar</label>
   <input type="file" id="fajl" accept="image/*" capture="environment" hidden>
-  <img id="pre" alt="Slika kvara"></div>
+  <img id="pre" alt="Slika kvara">
+  <div class="napomena-teren">⚠️ Izlazak majstora u lokalu iznosi 3.000,00 RSD, a van lokala se naplaćuje dodatno 120.00 RSD po kilometru.</div>
+ </div>
  <div class="sek"><h3>3. Koliko je hitno?</h3>
   <div class="hit" id="hit">
    <button data-h="Hitno danas">🔴 Hitno danas</button>
@@ -95,7 +98,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 <div id="ok"><div><h2>✅ Poziv poslat!</h2><p>Javićemo vam se uskoro.</p><button onclick="this.closest('#ok').style.display='none'">U redu</button></div></div>
 
 <script>
-// ===== PODEŠAVANJA (popuni) =====
+// ===== PODEŠAVANJA =====
 const SUPABASE_URL = "";      
 const SUPABASE_KEY = "";      
 const TELEFON = "+381638434412";   
