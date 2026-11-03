@@ -261,24 +261,19 @@ async function ucitajMajstore() {
 
 async function dodajMajstora(e) {
   e.preventDefault();
-  const ime = document.getElementById('m-ime').value;
-  const telefon = document.getElementById('m-telefon').value;
-  const katUnos = document.getElementById('m-kategorija').value.toLowerCase().trim();
-  const prioritet = parseInt(document.getElementById('m-prioritet').value);
+  const ime = document.getElementById('m-ime').value.trim();
+  const telefon = document.getElementById('m-telefon').value.trim();
+  const kategorija = document.getElementById('m-kategorija').value.trim();
+  const prioritet = parseInt(document.getElementById('m-prioritet').value) || 1;
 
   if(!sb) return alert("Supabase nije povezan.");
-  
-  const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Šaljemo "kategorije" kao niz (text[]) i dodajemo "pin" jer ga baza zahteva
   const { error } = await sb.from('majstori').insert([{ 
     ime, 
     telefon, 
-    kategorije: [katUnos], 
+    kategorija, 
     prioritet, 
-    aktivan: true,
-    pin: randomPin,
-    cenovnik: []
+    aktivan: true 
   }]);
 
   if (error) {
