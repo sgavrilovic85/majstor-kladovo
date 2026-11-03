@@ -210,25 +210,85 @@ async function crtajStatus(){
 
 // ===== ADMIN: majstori (PIN se proverava u bazi) =====
 $("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
-async function ucitajMajstore(){
- const el=$("majstori-list");el.textContent="Učitavanje...";
- if(!sb){el.textContent="Supabase nije podešen.";return}
- const r=await sb.rpc("a_majstori",{p_admin:ADMIN});
- if(r.error){if(/PIN/.test(r.error.message)){ADMIN="";el.innerHTML="<b style='color:#c00'>Pogrešan PIN. Klikni ponovo na tab Majstori.</b>"}else el.innerHTML="<b style='color:#c00'>Greška: "+esc(r.error.message)+"</b>";return}
- el.innerHTML=r.data.length?r.data.map(m=>`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center">
-  <div><b>${esc(m.ime)} ${m.prioritet===1?"⭐":""}</b> <small>(prioritet ${esc(m.prioritet)})</small><br>
-  <small>${esc((m.kategorije||[]).join(", ")||"bez kategorija")}<br>📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b></small></div>
-  <button class="mali" style="flex:none;background:#e53e3e;color:#fff;border:0" onclick="obrisiMajstora(${m.id})">Obriši</button></div>`).join(""):"Nema majstora.";}
-async function dodajMajstora(){
- const ime=$("m-ime").value.trim(),tel=$("m-telefon").value.trim(),pr=parseInt($("m-prioritet").value)||1;
- const kk=[...document.querySelectorAll("#m-kats input:checked")].map(x=>x.value);
- if(!ime||!tel||!kk.length)return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
- const r=await sb.rpc("a_dodaj",{p_admin:ADMIN,p_ime:ime,p_telefon:tel,p_kat:kk,p_prioritet:pr});
- if(r.error)return alert("Greška: "+r.error.message);
- alert("Majstor dodat ✅\nNjegov PIN za panel: "+r.data+"\n(pošalji mu ga)");
- ["m-ime","m-telefon"].forEach(i=>$(i).value="");document.querySelectorAll("#m-kats input").forEach(x=>x.checked=false);ucitajMajstore();}
-async function obrisiMajstora(id){if(!confirm("Obrisati majstora?"))return;
- const r=await sb.rpc("a_obrisi",{p_admin:ADMIN,p_id:id});if(r.error)alert(r.error.message);ucitajMajstore();}
-</script>
-</body>
-</html>
+async function ucitajMajstore() {
+  const el = $("majstori-list");
+  if (!el) return;
+  el.textContent = "Učitavanje...";
+  
+  try {
+    const { data, error } = await sb
+      .from('majstori')
+      .select('*')
+      .order('id', { ascending: true });
+      
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      el.innerHTML = "<p>Nema unetih majstora.</p>";
+      return;
+    }
+    
+    el.innerHTML = data.map(m => `
+      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
+        <b>${esc(m.ime)}</b><br>
+        <small>Kategorije: ${esc(Array.isArray(m.kategorije) ? m.kategorije.join(", ") : m.kategorije)}</small><br>
+        📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b><br>
+        <button class="mali" style="margin-top:5px;background:#e53e3e;color:#fff;border:0;padding:5px 10px;border-radius:5px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button>
+      </div>
+    `).join("");
+    
+  } catch (err) {
+    el.innerHTML = `<b style="color:#c00">Greška: ${err.message}</b>`;
+  }
+}
+
+async function dodajMajstora() {
+  const ime = $("m-ime").value.trim();
+  const tel = $("m-telefon").value.trim();
+  const kk = [...document.querySelectorAll("#m-kats input:checked")].map(x => x.value);
+  
+  if (!ime || !tel || !kk.length) {
+    return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
+  }
+  
+  const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  try {
+    const { error } = await sb
+      .from('majstori')
+      .insert([{
+        ime: ime,
+        telefon: tel,
+        kategorije: kk,
+        pin: randomPin
+      }]);
+      
+    if (error) throw error;
+    
+    alert("Majstor uspešno sačuvan! Njegov PIN: " + randomPin);
+    $("m-ime").value = "";
+    $("m-telefon").value = "";
+    document.querySelectorAll("#m-kats input").forEach(x => x.checked = false);
+    ucitajMajstore();
+    
+  } catch (err) {
+    alert("Greška pri čuvanju: " + err.message);
+  }
+}
+
+async function obrisiMajstora(id) {
+  if (!confirm("Da li sigurno želiš da obrišeš majstora?")) return;
+  
+  try {
+    const { error } = await sb
+      .from('majstori')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    ucitajMajstore();
+    
+  } catch (err) {
+    alert("Greška pri brisanju: " + err.message);
+  }
+}
