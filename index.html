@@ -211,6 +211,9 @@ async function crtajStatus(){
 // ===== ADMIN: majstori (PIN se proverava u bazi) =====
 $("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
 async function ucitajMajstore(){
+  if (typeof ADMIN === 'undefined' || !ADMIN) {
+    ADMIN = prompt("Unesi admin PIN za pristup bazi:") || "654321";
+  }
   const el=$("majstori-list"); el.textContent="Učitavanje...";
   if(!sb){el.textContent="Supabase nije podešen.";return;}
   try {
@@ -224,11 +227,15 @@ async function ucitajMajstore(){
       body: JSON.stringify({ p_admin: ADMIN })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Pogrešan PIN");
+    if (!response.ok) {
+      ADMIN = prompt("Pogrešan PIN! Unesi tačan admin PIN:");
+      ucitajMajstore();
+      return;
+    }
     
     el.innerHTML = data.map(m=>`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px"><b>${esc(m.ime)} ${m.prioritet==1?"⭐":""}</b><small>(prioritet ${esc(m.prioritet)})</small><br><small>${esc((m.kategorije||[]).join(", "))||"bez kategorija"}</small><br> ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b></small><br><button class="mali" style="flex:none;background:#e53e3e;color:#fff;border:0" onclick="obrisiMajstora(${m.id})">Obriši</button></div>`).join("");
   } catch (err) {
-    el.innerHTML = `<b style="color:#c00">Pogrešan PIN. Klikni ponovo na tab i unesi tačan PIN.</b>`;
+    el.innerHTML = `<b style="color:#c00">Greška u konekciji. Klikni ponovo na tab.</b>`;
   }
 }
 async function dodajMajstora(){
