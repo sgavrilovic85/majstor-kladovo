@@ -1,109 +1,103 @@
 <!DOCTYPE html>
-<html lang="sr">
-<head>
-<meta charset="utf-8">
+<html lang="sr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kontrolna tabla – Majstor na terenu</title>
+<title>Panel majstora</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-:root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding:12px}
-header{background:var(--plava);color:#fff;text-align:center;padding:14px;border-radius:12px;margin-bottom:12px}
-header h1{margin:0;font-size:20px}
-.sekcija{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
-.sekcija h3{margin:0 0 10px;font-size:16px;color:var(--plava)}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:10px 8px;border-bottom:1px solid #eee;text-align:left}
-th{background:#f8f9fc;color:var(--sv)}
-.bedz{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#fff}
-.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
-button{padding:8px 14px;border:0;border-radius:8px;background:var(--plava);color:#fff;font-weight:600;cursor:pointer}
-button.sekundarno{background:#e9effc;color:var(--plava)}
-.prioritet-1{background:#fff8e1;font-weight:bold;}
-</style>
-</head>
-<body>
-<header>
-  <h1>⚙️ Kontrolna tabla za majstore</h1>
-  <p style="margin:4px 0 0;font-size:13px;color:#b9cdf5;">Sistem prioriteta i raspored</p>
-</header>
-
+:root{--p:#1b3a7a;--n:#f26a1b;--z:#1f9d55}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f2f4f8;color:#1d2433}
+header{background:var(--p);color:#fff;text-align:center;padding:14px}header h1{margin:0;font-size:20px}
+main{max-width:560px;margin:0 auto;padding:12px}
+.k{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px}
+input,textarea,select{width:100%;padding:11px;border:1px solid #cfd5e3;border-radius:10px;font-size:16px;font-family:inherit;margin-top:6px}
+button{padding:12px;border:0;border-radius:10px;font-size:15px;font-weight:700;background:var(--p);color:#fff}
+.nar{background:var(--n)}.zel{background:var(--z)}.sv{background:#e6e9f1;color:#1d2433}
+.tabs{display:flex;background:#fff;position:sticky;top:0;z-index:5;box-shadow:0 1px 4px #0002}
+.tabs button{flex:1;background:none;color:#6b7385;border-radius:0;border-bottom:3px solid transparent}
+.tabs button.on{color:var(--p);border-color:var(--n)}
+.p{display:none}.p.on{display:block}
+.poz{display:flex;gap:10px}.poz img{width:96px;height:96px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips button{padding:7px 10px;font-size:13px;background:#e9effc;color:var(--p)}
+.red{display:flex;gap:8px;margin-top:8px}.red>*{flex:1}
+.b{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;color:#fff;background:#d94b3d}
+.dani{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dani button{background:#fff;color:#1d2433;border:2px solid #dde2ee;padding:9px 2px;font-size:13px}
+.dani button.on{background:var(--z);color:#fff;border-color:var(--z)}
+a{color:var(--p);font-weight:700}
+</style></head><body>
+<header><h1>🛠️ Panel majstora</h1></header>
 <main>
- <div class="sekcija">
-  <h3>👷 Lista majstora (Rangirani po prioritetu)</h3>
-  <div id="lista-majstora">Učitavanje...</div>
- </div>
-
- <div class="sekcija">
-  <h3>📋 Pristigli pozivi građana</h3>
-  <div id="lista-poziva">Učitavanje poziva...</div>
- </div>
+<div class="k" id="login"><b>Unesite vaš PIN</b>
+ <input id="pin" type="password" inputmode="numeric" placeholder="PIN (6 cifara)">
+ <div class="red"><button class="nar" onclick="ulaz()">Uđi</button></div></div>
+<div id="app" style="display:none">
+ <div class="k"><b id="ime"></b></div>
+ <div class="tabs"><button class="on" data-t="poz">Pozivi</button><button data-t="cen">Cenovnik</button><button data-t="kal">Kalendar</button></div>
+ <div style="height:12px"></div>
+ <section class="p on" id="poz"></section>
+ <section class="p" id="cen"><div class="k"><div id="redovi"></div>
+  <div class="red"><button class="sv" onclick="cen.push({naziv:'',cena:''});crtCen()">+ Dodaj uslugu</button><button class="zel" onclick="snimiCen()">Sačuvaj</button></div></div></section>
+ <section class="p" id="kal"><div class="k"><b>Obeleži dane kad si slobodan</b><p style="font-size:13px;color:#6b7385;margin:4px 0 10px">Zeleno = slobodan. Klijenti vide najbliži slobodan termin.</p>
+  <div class="dani" id="dani"></div><div class="red"><button class="zel" onclick="snimiKal()">Sačuvaj kalendar</button></div></div></section>
+</div>
 </main>
-
 <script>
-// ===== PODEŠAVANJA =====
-const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
-const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
-// Zaštita PIN-om za admina
-const unetiPin = prompt("Unesi admin PIN za pristup kontrolnoj tabli:");
-if (unetiPin !== "2801") {
-    alert("Pogrešan PIN! Pristup odbijen.");
-    document.body.innerHTML = "<h2 style='text-align:center;margin-top:50px;color:red;'>Pristup zabranjen – Samo za administratora</h2>";
-    throw new Error("Neovlašćen pristup");
-}
-  // =================================
-const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+const SUPABASE_URL="https://ulbqtvdcepkgawcdfqud.supabase.co";
+const SUPABASE_KEY="sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
+const IZLAZAK=3000;
 const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fd=s=>s?new Date(s).toLocaleDateString("sr-RS",{day:"2-digit",month:"2-digit",year:"numeric"}):"";
+const sb=(SUPABASE_URL&&SUPABASE_KEY)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+let PIN="",M=null,cen=[],dani=new Set(),lista=[];
+try{$("pin").value=localStorage.getItem("mpin")||""}catch(e){}
 
-async function ucitajPodatke(){
-  if(!sb){
-    $("lista-majstora").innerHTML="Supabase nije podešen u kodu.";
-    $("lista-poziva").innerHTML="Supabase nije podešen u kodu.";
-    return;
-  }
+async function ulaz(){
+ if(!sb)return alert("Dodaj Supabase ključeve u kod.");
+ const pin=$("pin").value.trim();
+ const r=await sb.rpc("m_prijava",{p_pin:pin});
+ if(r.error||!r.data)return alert("Pogrešan PIN.");
+ PIN=pin;M=r.data;try{localStorage.setItem("mpin",pin)}catch(e){}
+ cen=M.cenovnik||[];dani=new Set((M.slobodni||[]).map(d=>String(d).slice(0,10)));
+ $("login").style.display="none";$("app").style.display="block";$("ime").textContent=M.ime+" – "+(M.kategorije||[]).join(", ");
+ crtCen();crtKal();pozivi();}
 
-  // 1. Učitavanje majstora sortiranih po prioritetu (1 je najviši prioritet)
-  const resM = await sb.from("majstori").select("*").order("prioritet", { ascending: true });
-  const majstori = resM.data || [];
-  
-  if(majstori.length === 0){
-    $("lista-majstora").innerHTML="<p>Nema unetih majstora u bazi.</p>";
-  } else {
-    let htmlM = `<table><tr><th>Prioritet</th><th>Ime</th><th>Telefon</th><th>Kategorije</th></tr>`;
-    majstori.forEach(m => {
-      htmlM += `<tr class="${m.prioritet === 1 ? 'prioritet-1' : ''}">
-        <td>⭐ ${m.prioritet}</td>
-        <td><b>${m.ime}</b> ${m.prioritet === 1 ? '(Glavni / Prednost)' : ''}</td>
-        <td>${m.telefon || '-'}</td>
-        <td>${(m.kategorije || []).join(", ")}</td>
-      </tr>`;
-    });
-    htmlM += `</table>`;
-    $("lista-majstora").innerHTML = htmlM;
-  }
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+ document.querySelectorAll(".p").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));
+ if(b.dataset.t==="poz")pozivi();});
 
-  // 2. Učitavanje poziva
-  const resP = await sb.from("pozivi").select("*").order("created_at", { ascending: false }).limit(20);
-  const pozivi = resP.data || [];
+async function pozivi(){
+ const r=await sb.rpc("m_pozivi",{p_pin:PIN});lista=r.data||[];
+ $("poz").innerHTML=lista.length?lista.map(p=>{
+  const moj=p.majstor_id===M.id,zav=p.status==="Završeno";
+  return `<div class="k"><div class="poz"><img src="${esc(p.foto_url||"")}" alt="">
+  <div><b>${esc(p.kategorija)}</b> <span class="b">${esc(p.hitnost)}</span><br>${esc(p.opis)||"<i>bez opisa</i>"}<br>
+  📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
+  📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
+  ${zav?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
+  <input id="c${p.id}" type="number" inputmode="numeric" placeholder="Cena (din)" value="${p.cena||""}">
+  <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(p.ponuda_opis||"")}">
+  <input id="t${p.id}" type="date" value="${p.termin||""}">
+  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${moj?"Izmeni ponudu":"Pošalji ponudu"}</button>
+  ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
-  if(pozivi.length === 0){
-    $("lista-poziva").innerHTML="<p>Nema pristiglih poziva.</p>";
-  } else {
-    let htmlP = `<table><tr><th>Kategorija</th><th>Adresa / Telefon</th><th>Status</th></tr>`;
-    pozivi.forEach(p => {
-      htmlP += `<tr>
-        <td><b>${p.kategorija}</b><br><small>${p.hitnost}</small></td>
-        <td>${p.adresa}<br><small>${p.telefon}</small></td>
-        <td><span class="bedz ${p.status}">${p.status}</span></td>
-      </tr>`;
-    });
-    htmlP += `</table>`;
-    $("lista-poziva").innerHTML = htmlP;
-  }
-}
+function chip(id,i){$("c"+id).value=cen[i].cena;$("o"+id).value=cen[i].naziv}
+function izlazak(id){$("c"+id).value=IZLAZAK;$("o"+id).value="Samo izlazak majstora na teren"}
+async function ponuda(id){
+ const c=parseInt($("c"+id).value);if(!c)return alert("Upiši cenu.");
+ const r=await sb.rpc("m_ponuda",{p_pin:PIN,p_id:id,p_cena:c,p_opis:$("o"+id).value,p_termin:$("t"+id).value||null});
+ if(r.error)return alert("Greška: "+r.error.message);pozivi();}
+async function stat(id,s){const r=await sb.rpc("m_status",{p_pin:PIN,p_id:id,p_status:s});if(r.error)alert(r.error.message);pozivi();}
 
-ucitajPodatke();
-</script>
-</body>
-</html>
+function crtCen(){$("redovi").innerHTML=cen.length?cen.map((x,i)=>`<div class="red"><input style="flex:2" placeholder="Usluga (npr. zamena sifona)" value="${esc(x.naziv)}" oninput="cen[${i}].naziv=this.value">
+ <input type="number" placeholder="din" value="${esc(x.cena)}" oninput="cen[${i}].cena=this.value"><button class="sv" style="flex:0 0 44px" onclick="cen.splice(${i},1);crtCen()">✕</button></div>`).join(""):"<p>Cenovnik je prazan. Dodaj usluge i cene.</p>";}
+async function snimiCen(){const r=await sb.rpc("m_cenovnik",{p_pin:PIN,p_c:cen.filter(x=>x.naziv)});alert(r.error?r.error.message:"Cenovnik sačuvan ✅");pozivi();}
+
+const iso=d=>d.toLocaleDateString("sv-SE");
+function crtKal(){const h=[];for(let i=0;i<28;i++){const d=new Date();d.setDate(d.getDate()+i);const k=iso(d);
+ h.push(`<button class="${dani.has(k)?"on":""}" onclick="tg('${k}',this)">${d.toLocaleDateString("sr-RS",{weekday:"short"})}<br>${d.getDate()}.${d.getMonth()+1}.</button>`)}
+ $("dani").innerHTML=h.join("");}
+function tg(k,b){dani.has(k)?dani.delete(k):dani.add(k);b.classList.toggle("on")}
+async function snimiKal(){const r=await sb.rpc("m_slobodni",{p_pin:PIN,p_dani:[...dani]});alert(r.error?r.error.message:"Kalendar sačuvan ✅");}
+</script></body></html>
