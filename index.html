@@ -57,10 +57,12 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 </head>
 <body>
 <header><h1>🛠️ Majstor na terenu</h1><p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p></header>
-<div class="tabs">
- <button class="on" data-t="prijava">Pozovi majstora</button>
- <button data-t="mapa">Mapa</button>
- <button data-t="status">Status</button>
+<div class="nav-tabs">
+  <button class="tab-btn active" onclick="openTab('pozovi')">Pozovi majstora</button>
+  <button class="tab-btn" onclick="openTab('mapa')">Mapa</button>
+  <button class="tab-btn" onclick="openTab('status')">Status</button>
+  <!-- Nova kartica za admin upravljanje majstorima -->
+  <button class="tab-btn" onclick="openAdminTab()">Majstori 🔒</button>
 </div>
 <main>
 <section id="prijava" class="pr on">
@@ -72,6 +74,41 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
   <img id="pre" alt="Slika kvara">
   <div class="napomena-teren">⚠️ Izlazak majstora u lokalu iznosi 3.000,00 RSD, a van lokala se naplaćuje dodatno 120.00 RSD po kilometru.</div>
  </div>
+ <!-- Sekcija za upravljanje majstorima (otvara se samo uz PIN) -->
+<div id="admin-tab" class="tab-content" style="display: none;">
+  <div class="admin-container">
+    <h3 style="margin-bottom: 15px; text-transform: uppercase;">BAZA MAJSTORA</h3>
+    
+    <!-- Lista unetih majstora -->
+    <div id="majstori-list" class="card-list">
+      <div style="text-align: center; color: #718096; padding: 10px;">Učitavanje majstora...</div>
+    </div>
+
+    <span class="refresh-link" onclick="ucitajMajstore()" style="display:inline-block; color:#3182ce; font-weight:bold; margin: 10px 0 20px 0; cursor:pointer;">↻ OSVEŽI LISTU</span>
+
+    <!-- Forma za dodavanje novog majstora -->
+    <h3 style="margin-bottom: 10px; text-transform: uppercase;">DODAJ NOVOG MAJSTORA</h3>
+    <form id="add-majstor-form" onsubmit="dodajMajstora(event)">
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; display: block;">IME I PREZIME</label>
+        <input type="text" id="m-ime" class="form-control" placeholder="npr. Petar Petrović" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; display: block;">TELEFON</label>
+        <input type="tel" id="m-telefon" class="form-control" placeholder="0631234567" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; display: block;">KATEGORIJA (vodoinstalater, elektricar...)</label>
+        <input type="text" id="m-kategorija" class="form-control" placeholder="npr. vodoinstalater" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-size: 12px; font-weight: bold; display: block;">PRIORITET (1 = Glavni majstor)</label>
+        <input type="number" id="m-prioritet" class="form-control" value="1" min="1" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+      </div>
+      <button type="submit" style="width: 100%; padding: 12px; background: #3182ce; color: white; border: none; font-weight: bold; border-radius: 6px; text-transform: uppercase; cursor: pointer;">Sačuvaj Majstora</button>
+    </form>
+  </div>
+</div>
  <div class="sek"><h3>3. Koliko je hitno?</h3>
   <div class="hit" id="hit">
    <button data-h="Hitno danas">🔴 Hitno danas</button>
@@ -172,7 +209,91 @@ async function crtajStatus(){
   <b>${esc(p.kategorija)}</b>${esc(p.adresa)}<br><small>Prijavljeno: ${fd(p.created_at)}</small><br>
   <span class="bedz ${esc((p.status||"Novo").replace(/[ š]/g,m=>m===" "?"-":"s"))}">${esc(p.status)}</span>
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
-  `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
+  ``<div class="sek">${sb}?”Još nema poziva.”:“Baza nije podešena – dodaj Supabase ključeve u kodu.”</div>`;}
+
+  // UBACI OVDJE JAVASCRIPT FUNKCIJE ZA MAJSTORE
+  let adminOtkljucan = false;
+
+  function openAdminTab() {
+    if (!adminOtkljucan) {
+      const pin = prompt("Unesi admin PIN za pristup majstorima:");
+      if (pin === "2801") {
+        adminOtkljucan = true;
+        prikaziAdminTab();
+      } else {
+        alert("Pogrešan PIN!");
+        return;
+      }
+    } else {
+      prikaziAdminTab();
+    }
+  }
+
+  function prikaziAdminTab() {
+    document.querySelectorAll('.tab-content, .pr').forEach(el => el.style.display = 'none');
+    document.getElementById('admin-tab').style.display = 'block';
+    ucitajMajstore();
+  }
+
+  async function ucitajMajstore() {
+    const listEl = document.getElementById('majstori-list');
+    listEl.innerHTML = '<div style="text-align: center; color: #718096; padding: 10px;">Učitavanje...</div>';
+
+    const { data, error } = await supabase.from('majstori').select('*').order('prioritet', { ascending: true });
+
+    if (error || !data) {
+      listEl.innerHTML = '<div style="color:red; text-align:center; padding: 10px;">Greška pri učitavanju majstora.</div>';
+      return;
+    }
+
+    if (data.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center; color:#718096; padding: 10px;">Nema unetih majstora.</div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    data.forEach(m => {
+      const item = document.createElement('div');
+      item.style.cssText = 'background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;';
+      item.innerHTML = `
+        <div>
+          <strong style="text-transform:uppercase;">${m.ime} ${m.prioritet === 1 ? '⭐ (Glavni)' : ''}</strong>
+          <div style="font-size:13px; color:#718096; margin-top:2px;">${m.kategorija || ''} • ${m.telefon}</div>
+        </div>
+        <button onclick="obrisiMajstora(${m.id})" style="background:#e53e3e; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">Obriši</button>
+      `;
+      listEl.appendChild(item);
+    });
+  }
+
+  async function dodajMajstora(e) {
+    e.preventDefault();
+    const ime = document.getElementById('m-ime').value;
+    const telefon = document.getElementById('m-telefon').value;
+    const kategorija = document.getElementById('m-kategorija').value.toLowerCase().trim();
+    const prioritet = parseInt(document.getElementById('m-prioritet').value);
+
+    const { error } = await supabase.from('majstori').insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
+
+    if (error) {
+      alert('Greška pri uvozu majstora: ' + error.message);
+    } else {
+      document.getElementById('add-majstor-form').reset();
+      document.getElementById('m-prioritet').value = 1;
+      ucitajMajstore();
+    }
+  }
+
+  async function obrisiMajstora(id) {
+    if (confirm('Da li želite da obrišete ovog majstora?')) {
+      const { error } = await supabase.from('majstori').delete().eq('id', id);
+      if (!error) {
+        ucitajMajstore();
+      } else {
+        alert('Greška pri brisanju!');
+      }
+    }
+  }
 </script>
 </body>
 </html>
