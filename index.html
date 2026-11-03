@@ -161,8 +161,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
  $("dno").style.display=t==="prijava"?"flex":"none";
- if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin")ucitajMajstore();});
-
+ if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin" || t==="majstori")ucitajMajstore();
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
  if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
