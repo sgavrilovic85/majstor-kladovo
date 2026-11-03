@@ -4,60 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Majstor na terenu - Kladovo</title>
-    <!-- Supabase SDK -->
+    <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; font-family: Arial, sans-serif; }
-        body { background: #f0f4f8; margin: 0; padding: 0; padding-bottom: 90px; }
-        
-        /* Header */
-        header { background: #1a365d; color: white; text-align: center; padding: 15px 10px; }
-        header h1 { margin: 0; font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        header p { margin: 5px 0 0; font-size: 13px; opacity: 0.9; }
-
-        /* Navigacija */
-        .nav-tabs { display: flex; background: white; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
-        .tab-btn { flex: 1; padding: 12px 5px; text-align: center; background: none; border: none; font-weight: bold; color: #4a5568; font-size: 13px; cursor: pointer; }
-        .tab-btn.active { color: #1a365d; border-bottom: 3px solid #dd6b20; }
-
-        /* Kontejner i kartice */
-        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .card-box { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .card-box h3 { margin-top: 0; margin-bottom: 12px; color: #1a365d; font-size: 16px; }
-
-        /* Mreža majstora (Kartice sa tvojim slikama) */
-        .grid-kategorije { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .kat-card { border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; cursor: pointer; text-align: center; transition: 0.2s; position: relative; }
-        .kat-card.selected { border-color: #2b6cb0; box-shadow: 0 0 0 2px #2b6cb0; }
-        .kat-card img { width: 100%; height: 130px; object-fit: cover; display: block; }
-        .kat-card .label { background: #1a365d; color: white; font-weight: bold; padding: 8px 4px; font-size: 13px; }
-        .kat-card.ostalo { border: 2px dashed #cbd5e0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 170px; background: #faf5ff; }
-
-        /* Obaveštenje o ceni */
-        .price-notice { background: #fffaf0; border: 1px solid #feebc8; border-radius: 8px; padding: 10px; color: #744210; font-size: 12px; font-weight: bold; text-align: center; margin-top: 10px; }
-
-        /* Hitnost dugmad */
-        .hitnost-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .hitnost-btn { border: 2px solid #cbd5e0; background: white; border-radius: 8px; padding: 10px 5px; text-align: center; font-weight: bold; font-size: 12px; cursor: pointer; }
-        .hitnost-btn.selected { border-color: #1a365d; background: #ebf8ff; }
-
-        /* Input polja */
-        input[type="text"], input[type="number"], textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
-        .btn-sub { background: white; border: 1px solid #cbd5e0; border-radius: 8px; padding: 10px; width: 100%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-
-        /* Fiksirano dno - Pozovi & Pošalji */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px 15px; display: flex; gap: 10px; border-top: 1px solid #e2e8f0; z-index: 1000; }
-        .btn-call { background: #38a169; color: white; border: none; border-radius: 10px; padding: 12px 15px; font-weight: bold; font-size: 15px; display: flex; align-items: center; gap: 6px; text-decoration: none; justify-content: center; }
-        .btn-send { background: #ed8936; color: white; border: none; border-radius: 10px; padding: 12px 15px; font-weight: bold; font-size: 15px; flex: 1; cursor: pointer; }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 0; color: #333; }
+        header { background: #1a365d; color: white; padding: 15px; text-align: center; }
+        .nav-tabs { display: flex; background: #fff; border-bottom: 2px solid #cbd5e0; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px 10px; text-align: center; background: none; border: none; font-weight: bold; cursor: pointer; color: #4a5568; white-space: nowrap; }
+        .tab-btn.active { border-bottom: 4px solid #dd6b20; color: #1a365d; }
+        .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section { display: none; }
+        .section.active { display: block; }
+        h2 { color: #1a365d; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 18px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+        .btn-action { background: #2b6cb0; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-action:hover { background: #2c5282; }
+        .error { color: #e53e3e; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .success { color: #38a169; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .grid-kategorije { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .card-kat { border: 1px solid #cbd5e0; border-radius: 8px; overflow: hidden; text-align: center; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-kat img { width: 100%; height: 100px; object-fit: cover; display: block; }
+        .card-kat .naziv-kat { padding: 8px; font-weight: bold; background: #1a365d; color: white; font-size: 13px; margin: 0; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>🛠️ Majstor na terenu</h1>
+    <h1>Majstor na terenu</h1>
     <p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p>
 </header>
 
@@ -65,199 +40,135 @@
     <button class="tab-btn active" onclick="otvoriTab(event, 'tab-pozovi')">Pozovi majstora</button>
     <button class="tab-btn" onclick="otvoriTab(event, 'tab-mapa')">Mapa</button>
     <button class="tab-btn" onclick="otvoriTab(event, 'tab-status')">Status</button>
-    <button class="tab-btn" onclick="otvoriTab(event, 'tab-majstori')">Majstori 🔒</button>
+    <button class="tab-btn" onclick="proveriPinIskoristiTab(event, 'tab-majstori')">Majstori 🔒</button>
 </div>
 
 <div class="container">
     <!-- TAB 1: POZOVI MAJSTORA -->
-    <div id="tab-pozovi" class="tab-content active">
-        
-        <!-- 1. KATEGORIJE SA TVOJIM SLIKAMA -->
-        <div class="card-box">
-            <h3>1. Šta vam treba?</h3>
-            <div class="grid-kategorije">
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Vodoinstalater')">
-                    <img src="vodoinstalater.webp" alt="Vodoinstalater">
-                    <div class="label">Vodoinstalater</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Električar')">
-                    <img src="elektricar.webp" alt="Električar">
-                    <div class="label">Električar</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Limar')">
-                    <img src="limar.webp" alt="Limar">
-                    <div class="label">Limar</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Lift')">
-                    <img src="lift.webp" alt="Lift">
-                    <div class="label">Lift</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Pomoć u kući')">
-                    <img src="pomoc-u-kuci.webp" alt="Pomoć u kući">
-                    <div class="label">Pomoć u kući</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Keramičar')">
-                    <img src="keramicar.webp" alt="Keramičar">
-                    <div class="label">Keramičar</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Čišćenje')">
-                    <img src="ciscenje.webp" alt="Čišćenje">
-                    <div class="label">Čišćenje</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Bašta / Dvorište')">
-                    <img src="basta-dvoriste.webp" alt="Bašta / Dvorište">
-                    <div class="label">Bašta / Dvorište</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Grejanje / Klima')">
-                    <img src="grejanje-klima.webp" alt="Grejanje / Klima">
-                    <div class="label">Grejanje / Klima</div>
-                </div>
-                <div class="kat-card" onclick="izaberiKategoriju(this, 'Građevinar')">
-                    <img src="gradjevinar.webp" alt="Građevinar">
-                    <div class="label">Građevinar</div>
-                </div>
-                <div class="kat-card ostalo" onclick="izaberiKategoriju(this, 'Ostalo')">
-                    <span style="font-size:28px;">🔧</span>
-                    <strong style="margin-top:5px; color:#1a365d; font-size:13px;">Ostalo</strong>
-                </div>
+    <div id="tab-pozovi" class="section active">
+        <h2>1. Šta vam treba?</h2>
+        <div class="grid-kategorije">
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400" alt="Vodoinstalater">
+                <div class="naziv-kat">Vodoinstalater</div>
             </div>
-        </div>
-
-        <!-- 2. USLIKAJ KVAR -->
-        <div class="card-box">
-            <h3>2. Uslikaj kvar (Za procenu cene)</h3>
-            <button class="btn-sub">📷 Uslikaj kvar</button>
-            <div class="price-notice">
-                ⚠️ Izlazak majstora u lokalu iznosi 3.000,00 RSD, a van lokala se naplaćuje dodatno 120.00 RSD po kilometru.
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400" alt="Električar">
+                <div class="naziv-kat">Električar</div>
             </div>
-        </div>
-
-        <!-- 3. HITNOST -->
-        <div class="card-box">
-            <h3>3. Koliko je hitno?</h3>
-            <div class="hitnost-grid">
-                <div class="hitnost-btn" onclick="izaberiHitnost(this, 'Hitno danas')">🔴 Hitno danas</div>
-                <div class="hitnost-btn selected" onclick="izaberiHitnost(this, 'Do sutra')">🟠 Do sutra</div>
-                <div class="hitnost-btn" onclick="izaberiHitnost(this, 'Nije hitno')">🟢 Nije hitno</div>
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1541888946425-d0fbb18fcd93?w=400" alt="Limar">
+                <div class="naziv-kat">Limar</div>
             </div>
-        </div>
-
-        <!-- 4. OPIS KVARA -->
-        <div class="card-box">
-            <h3>4. Opis kvara (opciono)</h3>
-            <textarea rows="3" placeholder="Npr. curi ventil u kupatilu, zagušen slivnik..."></textarea>
-            <button class="btn-sub">🎤 Izgovori opis</button>
-        </div>
-
-        <!-- 5. LOKACIJA -->
-        <div class="card-box">
-            <h3>5. Gde?</h3>
-            <input type="text" placeholder="Adresa u Kladovu / zgrada, npr. 22">
-            <button class="btn-sub">📍 Moja lokacija</button>
-        </div>
-
-        <!-- 6. TELEFON -->
-        <div class="card-box">
-            <h3>6. Vaš telefon</h3>
-            <input type="text" placeholder="06x xxx xxxx">
-            <p style="font-size:12px; color:#718096; text-align:center; margin:5px 0 0;">Majstor će vas nazvati u najkraćem roku.</p>
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400" alt="Lift">
+                <div class="naziv-kat">Lift</div>
+            </div>
         </div>
     </div>
 
     <!-- TAB 2: MAPA -->
-    <div id="tab-mapa" class="tab-content">
-        <div class="card-box">
-            <h3>Mapa terena Kladovo</h3>
-            <p>Pregled pokrivenosti lokacija u Kladovu i okolini.</p>
-        </div>
+    <div id="tab-mapa" class="section">
+        <h2>Mapa terena</h2>
+        <p>Pregled lokacija i terena u Kladovu.</p>
     </div>
 
     <!-- TAB 3: STATUS -->
-    <div id="tab-status" class="tab-content">
-        <div class="card-box">
-            <h3>Status prijavljenih kvarova</h3>
-            <p>Još nema aktivnih poziva.</p>
-        </div>
+    <div id="tab-status" class="section">
+        <h2>Status poziva</h2>
+        <p>Još nema aktivnih poziva.</p>
     </div>
 
-    <!-- TAB 4: MAJSTORI (Upravljanje bazom) -->
-    <div id="tab-majstori" class="tab-content">
-        <div class="card-box">
-            <h3>BAZA MAJSTORA</h3>
-            <div id="poruka-status"></div>
-            
-            <label style="font-weight:bold; font-size:13px;">IME I PREZIME</label>
-            <input type="text" id="adm-ime" placeholder="npr. Petar Petrović">
+    <!-- TAB 4: MAJSTORI (Zaštićeno PIN-om) -->
+    <div id="tab-majstori" class="section">
+        <h2>BAZA MAJSTORA</h2>
+        <div id="poruka"></div>
 
-            <label style="font-weight:bold; font-size:13px;">TELEFON</label>
-            <input type="text" id="adm-telefon" placeholder="0631234567">
-
-            <label style="font-weight:bold; font-size:13px;">KATEGORIJA</label>
-            <input type="text" id="adm-kategorija" placeholder="npr. vodoinstalater">
-
-            <label style="font-weight:bold; font-size:13px;">PRIORITET (1 = Glavni majstor)</label>
-            <input type="number" id="adm-prioritet" value="1">
-
-            <button class="btn-send" style="width:100%; border-radius:8px; margin-top:5px;" onclick="dodajMajstoraUBazu()">SAČUVAJ MAJSTORA</button>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>IME I PREZIME</label>
+            <input type="text" id="ime" placeholder="npr. Petar Petrović">
         </div>
-    </div>
-</div>
 
-<!-- FIKSIRANO DNO -->
-<div class="bottom-bar">
-    <a href="tel:0637748206" class="btn-call">📞 Pozovi</a>
-    <button class="btn-send" onclick="posaljiPoziv()">Pošalji poziv majstoru</button>
+        <div class="form-group">
+            <label>TELEFON</label>
+            <input type="text" id="telefon" placeholder="0631234567">
+        </div>
+
+        <div class="form-group">
+            <label>KATEGORIJA</label>
+            <input type="text" id="kategorija" placeholder="npr. vodoinstalater">
+        </div>
+
+        <div class="form-group">
+            <label>PRIORITET (1 = Glavni majstor)</label>
+            <input type="number" id="prioritet" value="1">
+        </div>
+
+        <button class="btn-action" onclick="sacuvajMajstora()">SAČUVAJ MAJSTORA</button>
+    </div>
 </div>
 
 <script>
-    function otvoriTab(evt, tabId) {
-        const tabs = document.querySelectorAll('.tab-content');
-        tabs.forEach(t => t.classList.remove('active'));
+    // Standardna navigacija za javne tabove
+    function otvoriTab(evt, tabNaziv) {
+        sakrijSveSekcije();
+        document.getElementById(tabNaziv).classList.add('active');
         
-        const btns = document.querySelectorAll('.tab-btn');
-        btns.forEach(b => b.classList.remove('active'));
-
-        document.getElementById(tabId).classList.add('active');
+        const dugmadi = document.getElementsByClassName('tab-btn');
+        for (let d of dugmadi) d.classList.remove('active');
         evt.currentTarget.classList.add('active');
     }
 
-    function izaberiKategoriju(el, naziv) {
-        document.querySelectorAll('.kat-card').forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
+    // Zaštićeni tab sa PIN-om 2801
+    function proveriPinIskoristiTab(evt, tabNaziv) {
+        const pin = prompt("Unesi administracioni PIN:");
+        if (pin === "2801") {
+            sakrijSveSekcije();
+            document.getElementById(tabNaziv).classList.add('active');
+            
+            const dugmadi = document.getElementsByClassName('tab-btn');
+            for (let d of dugmadi) d.classList.remove('active');
+            evt.currentTarget.classList.add('active');
+        } else {
+            alert("Pogrešan PIN!");
+        }
     }
 
-    function izaberiHitnost(el, nivo) {
-        document.querySelectorAll('.hitnost-btn').forEach(b => b.classList.remove('selected'));
-        el.classList.add('selected');
+    function sakrijSveSekcije() {
+        const sekcije = document.getElementsByClassName('section');
+        for (let s of sekcije) s.classList.remove('active');
     }
 
-    function posaljiPoziv() {
-        alert("Poziv je uspešno prosleđen majstoru!");
-    }
-
-    // Supabase konekcija
+    // Supabase konekcija (unesi svoj pravi anon ključ umesto tačkica)
     const supabaseUrl = 'https://ulbqtvdcepkgawcdfqud.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsYnF0dmRjcGVrZ2F3Y2RmcXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNDk0MTIsImV4cCI6MjA1Njg4NTQxMn0.N5Z...'; 
+    const supabaseKey = 'Tvoj_Pravi_Anon_kljuc_ovde'; 
     const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function dodajMajstoraUBazu() {
-        const ime = document.getElementById('adm-ime').value;
-        const telefon = document.getElementById('adm-telefon').value;
-        const kategorija = document.getElementById('adm-kategorija').value;
-        const prioritet = document.getElementById('adm-prioritet').value;
-        const statusDiv = document.getElementById('poruka-status');
+    async function sacuvajMajstora() {
+        const ime = document.getElementById('ime').value.trim();
+        const telefon = document.getElementById('telefon').value.trim();
+        const kategorija = document.getElementById('kategorija').value.trim();
+        const prioritet = parseInt(document.getElementById('prioritet').value) || 1;
+        const porukaDiv = document.getElementById('poruka');
 
-        if(!ime || !telefon || !kategorija) {
-            statusDiv.innerHTML = "<p style='color:red; font-weight:bold;'>Popunite sva polja!</p>";
+        if (!ime || !telefon || !kategorija) {
+            porukaDiv.innerHTML = '<div class="error">Molimo popunite sva polja!</div>';
             return;
         }
 
         try {
-            const { error } = await _supabase.from('majstori').insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
-            if(error) throw error;
-            statusDiv.innerHTML = "<p style='color:green; font-weight:bold;'>Majstor uspešno unet u bazu!</p>";
-        } catch(err) {
-            statusDiv.innerHTML = "<p style='color:red; font-weight:bold;'>Greška pri upisu u bazu.</p>";
+            const { error } = await _supabase
+                .from('majstori')
+                .insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
+
+            if (error) throw error;
+
+            porukaDiv.innerHTML = '<div class="success">Majstor je uspešno sačuvan!</div>';
+            document.getElementById('ime').value = '';
+            document.getElementById('telefon').value = '';
+            document.getElementById('kategorija').value = '';
+        } catch (err) {
+            porukaDiv.innerHTML = `<div class="error">Greška pri upisu: ${err.message}</div>`;
         }
     }
 </script>
