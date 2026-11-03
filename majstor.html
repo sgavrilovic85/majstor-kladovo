@@ -45,7 +45,14 @@ button.sekundarno{background:#e9effc;color:var(--plava)}
 // ===== PODEŠAVANJA =====
 const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
-// =================================
+// Zaštita PIN-om za admina
+const unetiPin = prompt("Unesi admin PIN za pristup kontrolnoj tabli:");
+if (unetiPin !== "2801") {
+    alert("Pogrešan PIN! Pristup odbijen.");
+    document.body.innerHTML = "<h2 style='text-align:center;margin-top:50px;color:red;'>Pristup zabranjen – Samo za administratora</h2>";
+    throw new Error("Neovlašćen pristup");
+}
+  // =================================
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 const $=id=>document.getElementById(id);
 
