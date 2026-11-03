@@ -9,59 +9,116 @@
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 0; color: #333; }
         header { background: #1a365d; color: white; padding: 15px; text-align: center; }
+        .nav-tabs { display: flex; background: #fff; border-bottom: 2px solid #cbd5e0; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px 10px; text-align: center; background: none; border: none; font-weight: bold; cursor: pointer; color: #4a5568; white-space: nowrap; }
+        .tab-btn.active { border-bottom: 4px solid #dd6b20; color: #1a365d; }
         .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2 { color: #1a365d; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        h2 { color: #1a365d; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 18px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
-        button { background: #2b6cb0; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #2c5282; }
+        .btn-action { background: #2b6cb0; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-action:hover { background: #2c5282; }
         .error { color: #e53e3e; font-weight: bold; text-align: center; margin-bottom: 10px; }
         .success { color: #38a169; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .grid-kategorije { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .card-kat { border: 1px solid #cbd5e0; border-radius: 8px; overflow: hidden; text-align: center; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-kat img { width: 100%; height: 110px; object-fit: cover; }
+        .card-kat span { display: block; padding: 10px; font-weight: bold; background: #1a365d; color: white; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Majstor na terenu</h1>
-    <p>Kladovo</p>
+    <p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p>
 </header>
 
+<div class="nav-tabs">
+    <button class="tab-btn active" onclick="otvoriTab(event, 'tab-pozovi')">Pozovi majstora</button>
+    <button class="tab-btn" onclick="otvoriTab(event, 'tab-mapa')">Mapa</button>
+    <button class="tab-btn" onclick="otvoriTab(event, 'tab-status')">Status</button>
+    <button class="tab-btn" onclick="otvoriTab(event, 'tab-majstori')">Majstori 🔒</button>
+</div>
+
 <div class="container">
-    <h2>Unos i upravljanje majstorima</h2>
-    <div id="poruka"></div>
-
-    <div class="form-group">
-        <label>IME I PREZIME</label>
-        <input type="text" id="ime" placeholder="npr. Petar Petrović">
+    <!-- TAB 1: POZOVI MAJSTORA -->
+    <div id="tab-pozovi" class="section active">
+        <h2>1. Šta vam treba?</h2>
+        <div class="grid-kategorije">
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400" alt="Vodoinstalater">
+                <span>Vodoinstalater</span>
+            </div>
+            <div class="card-kat">
+                <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400" alt="Električar">
+                <span>Električar</span>
+            </div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label>TELEFON</label>
-        <input type="text" id="telefon" placeholder="0631234567">
+    <!-- TAB 2: MAPA -->
+    <div id="tab-mapa" class="section">
+        <h2>Mapa terena</h2>
+        <p>Pregled lokacija i terena u Kladovu.</p>
     </div>
 
-    <div class="form-group">
-        <label>KATEGORIJA</label>
-        <input type="text" id="kategorija" placeholder="npr. vodoinstalater">
+    <!-- TAB 3: STATUS -->
+    <div id="tab-status" class="section">
+        <h2>Status poziva</h2>
+        <p>Još nema aktivnih poziva.</p>
     </div>
 
-    <div class="form-group">
-        <label>PRIORITET (1 = Glavni majstor)</label>
-        <input type="number" id="prioritet" value="1">
-    </div>
+    <!-- TAB 4: MAJSTORI (Admin / Upravljanje) -->
+    <div id="tab-majstori" class="section">
+        <h2>BAZA MAJSTORA</h2>
+        <div id="poruka"></div>
 
-    <button onclick="sacuvajMajstora()">SAČUVAJ MAJSTORA</button>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>IME I PREZIME</label>
+            <input type="text" id="ime" placeholder="npr. Petar Petrović">
+        </div>
+
+        <div class="form-group">
+            <label>TELEFON</label>
+            <input type="text" id="telefon" placeholder="0631234567">
+        </div>
+
+        <div class="form-group">
+            <label>KATEGORIJA</label>
+            <input type="text" id="kategorija" placeholder="npr. vodoinstalater">
+        </div>
+
+        <div class="form-group">
+            <label>PRIORITET (1 = Glavni majstor)</label>
+            <input type="number" id="prioritet" value="1">
+        </div>
+
+        <button class="btn-action" onclick="sacuvajMajstora()">SAČUVAJ MAJSTORA</button>
+    </div>
 </div>
 
 <script>
-    // Supabase inicijalizacija
+    // Navigacija tabova
+    function otvoriTab(evt, tabNaziv) {
+        const sekcije = document.getElementsByClassName('section');
+        for (let s of sekcije) s.classList.remove('active');
+
+        const dugmadi = document.getElementsByClassName('tab-btn');
+        for (let d of dugmadi) d.classList.remove('active');
+
+        document.getElementById(tabNaziv).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    // Supabase konekcija
     const supabaseUrl = 'https://ulbqtvdcepkgawcdfqud.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsYnF0dmRjcGVrZ2F3Y2RmcXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNDk0MTIsImV4cCI6MjA1Njg4NTQxMn0.N5Z... (unesi svoj anon ključ ovde ako želiš kompletan, mada ga već imaš u projektu)';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsYnF0dmRjcGVrZ2F3Y2RmcXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNDk0MTIsImV4cCI6MjA1Njg4NTQxMn0.N5Z...'; // unesi ili ostavi tvoj ključ ukoliko je bio u starom kodu
     
-    // Inicijalizacija preko supabase klijenta
-    const { createClient } = supabase;
-    const _supabase = createClient(supabaseUrl, 'SUPABASE_ANON_KEY'); // stavi svoj ključ
+    // Inicijalizacija klijenta
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     async function sacuvajMajstora() {
         const ime = document.getElementById('ime').value.trim();
@@ -76,7 +133,7 @@
         }
 
         try {
-            const { data, error } = await _supabase
+            const { error } = await _supabase
                 .from('majstori')
                 .insert([{ ime, telefon, kategorija, prioritet, aktivan: true }]);
 
