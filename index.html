@@ -6,7 +6,7 @@
 <title>Majstor na terenu – Kladovo</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.14.0/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
 *{box-sizing:border-box}
@@ -127,7 +127,7 @@ create policy "upload foto" on storage.objects for insert to anon with check (bu
 <script>
 // ===== PODEŠAVANJA (popuni) =====
 const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsYnF0dmRjZXBrZ2F3Y2RmZ3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM1NTMsImV4cCI6MjEwNzk5OTU1M30.9J1NNrpsxkQ_u1OvdeOPzB76JxYJxunted1lYEF5ej4";
+const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
 const IZLAZAK = 3000;   // cena samo izlaska majstora na teren (din)   // broj za dugme Pozovi
 const MEJL = "sredikladovo@gmail.com"; // rezerva ako baza nije podešena
@@ -136,7 +136,7 @@ const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["g
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
-const sb = (SUPABASE_URL && SUPABASE_KEY && window.supabase) ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } } }) : null;
+const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 
 const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
 OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on");pokaziSlob()};
@@ -154,14 +154,15 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
-let ADMIN = localStorage.getItem("admin_pin") || "654321";
+let ADMIN="";
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
- if((t==="admin" || t==="majstori") && !ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim();localStorage.setItem("admin_pin", ADMIN);}
+ if(t==="admin"&&!ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim()}
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
  $("dno").style.display=t==="prijava"?"flex":"none";
- if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin" || t==="majstori")ucitajMajstore();
+ if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin")ucitajMajstore();});
+
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
  if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
@@ -210,76 +211,24 @@ async function crtajStatus(){
 // ===== ADMIN: majstori (PIN se proverava u bazi) =====
 $("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
 async function ucitajMajstore(){
-  if (typeof ADMIN === 'undefined' || !ADMIN) {
-    ADMIN = prompt("Unesi admin PIN za pristup bazi:") || "654321";
-  }
-  const el=$("majstori-list"); el.textContent="Učitavanje...";
-  if(!sb){el.textContent="Supabase nije podešen.";return;}
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/a_majstori`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_admin: ADMIN })
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      ADMIN = prompt("Pogrešan PIN! Unesi tačan admin PIN:");
-      ucitajMajstore();
-      return;
-    }
-    
-    el.innerHTML = data.map(m=>`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px"><b>${esc(m.ime)} ${m.prioritet==1?"⭐":""}</b><small>(prioritet ${esc(m.prioritet)})</small><br><small>${esc((m.kategorije||[]).join(", "))||"bez kategorija"}</small><br> ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b><br><button class="mali" style="margin-top:5px;background:#e53e3e;color:#fff;border:0;padding:5px 10px;border-radius:5px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button></div>`).join("");
-  } catch (err) {
-    el.innerHTML = `<b style="color:#c00">Greška u konekciji. Klikni ponovo na tab.</b>`;
-  }
-}
-
+ const el=$("majstori-list");el.textContent="Učitavanje...";
+ if(!sb){el.textContent="Supabase nije podešen.";return}
+ const r=await sb.rpc("a_majstori",{p_admin:ADMIN});
+ if(r.error){if(/PIN/.test(r.error.message)){ADMIN="";el.innerHTML="<b style='color:#c00'>Pogrešan PIN. Klikni ponovo na tab Majstori.</b>"}else el.innerHTML="<b style='color:#c00'>Greška: "+esc(r.error.message)+"</b>";return}
+ el.innerHTML=r.data.length?r.data.map(m=>`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center">
+  <div><b>${esc(m.ime)} ${m.prioritet===1?"⭐":""}</b> <small>(prioritet ${esc(m.prioritet)})</small><br>
+  <small>${esc((m.kategorije||[]).join(", ")||"bez kategorija")}<br>📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b></small></div>
+  <button class="mali" style="flex:none;background:#e53e3e;color:#fff;border:0" onclick="obrisiMajstora(${m.id})">Obriši</button></div>`).join(""):"Nema majstora.";}
 async function dodajMajstora(){
-  const ime=$("m-ime").value.trim(), tel=$("m-telefon").value.trim(), pr=parseInt($("m-prioritet").value)||1;
-  const kk=[...document.querySelectorAll("#m-kats input:checked")].map(x=>x.value);
-  if(!ime||!tel||!kk.length)return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
-  
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/a_dodaj`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_admin: ADMIN, p_ime: ime, p_telefon: tel, p_kat: kk, p_prioritet: pr })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Greška pri čuvanju");
-    
-    alert("Majstor dodat! Njegov PIN za panel: " + data);
-    $("m-ime").value=""; $("m-telefon").value="";
-    document.querySelectorAll("#m-kats input").forEach(x=>x.checked=false);
-    ucitajMajstore();
-  } catch(err) {
-    alert("Greška: " + err.message);
-  }
-}
-
-async function obrisiMajstora(id){
-  if(!confirm("Da li sigurno želiš da obrišeš majstora?"))return;
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/a_obrisi`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_admin: ADMIN, p_id: id })
-    });
-    if (!response.ok) throw new Error("Greška pri brisanju");
-    ucitajMajstore();
-  } catch(err) {
-    alert("Greška: " + err.message);
-  }
-}
+ const ime=$("m-ime").value.trim(),tel=$("m-telefon").value.trim(),pr=parseInt($("m-prioritet").value)||1;
+ const kk=[...document.querySelectorAll("#m-kats input:checked")].map(x=>x.value);
+ if(!ime||!tel||!kk.length)return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
+ const r=await sb.rpc("a_dodaj",{p_admin:ADMIN,p_ime:ime,p_telefon:tel,p_kat:kk,p_prioritet:pr});
+ if(r.error)return alert("Greška: "+r.error.message);
+ alert("Majstor dodat ✅\nNjegov PIN za panel: "+r.data+"\n(pošalji mu ga)");
+ ["m-ime","m-telefon"].forEach(i=>$(i).value="");document.querySelectorAll("#m-kats input").forEach(x=>x.checked=false);ucitajMajstore();}
+async function obrisiMajstora(id){if(!confirm("Obrisati majstora?"))return;
+ const r=await sb.rpc("a_obrisi",{p_admin:ADMIN,p_id:id});if(r.error)alert(r.error.message);ucitajMajstore();}
+</script>
+</body>
+</html>
