@@ -208,6 +208,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   if(pin !== ADMIN_PIN){ alert("Pogrešan PIN!"); return; }
   adminAutorizovan = true;
   initMajstoriApp();
+ucitajAdminPanel(); 
  }
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
