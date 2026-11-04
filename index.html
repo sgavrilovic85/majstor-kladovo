@@ -548,13 +548,21 @@ function ucitajAdminPanel() {
     
     let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
     
+    // Proveravamo da li sekcija za zahteve već postoji, ako ne - pravimo je
+    let sekcijaZahteva = document.getElementById('sekcija-pristiglih-zahteva');
+    if (!sekcijaZahteva) {
+        sekcijaZahteva = document.createElement('div');
+        sekcijaZahteva.id = 'sekcija-pristiglih-zahteva';
+        // Ubacujemo je na sam vrh admin sadržaja
+        kontejner.prepend(sekcijaZahteva);
+    }
+    
     let html = `
-        <div style="padding: 15px;">
-            <h3>📋 Pristigli zahtevi saradnika (${zahtevi.length})</h3>
-            <div id="lista-zahteva">`;
+        <div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd;">
+            <h3 style="margin-top:0;">📋 Pristigli zahtevi saradnika (${zahtevi.length})</h3>`;
 
     if (zahtevi.length === 0) {
-        html += `<p>Trenutno nema novih zahteva.</p>`;
+        html += `<p style="color: #666;">Trenutno nema novih zahteva.</p>`;
     } else {
         zahtevi.forEach((zahtev, index) => {
             html += `
@@ -569,8 +577,8 @@ function ucitajAdminPanel() {
         });
     }
 
-    html += `</div></div>`;
-    kontejner.innerHTML = html;
+    html += `</div>`;
+    sekcijaZahteva.innerHTML = html;
 }
 
 function odobriSaradnika(index) {
