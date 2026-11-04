@@ -15,8 +15,8 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;bac
 header{background:var(--plava);color:#fff;text-align:center;padding:14px 12px 12px}
 header h1{margin:0;font-size:22px}
 header p{margin:4px 0 0;font-size:13px;color:#b9cdf5}
-.tabs{display:flex;background:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px #0002}
-.tabs button{flex:1;padding:13px 4px;border:0;background:none;font-size:14px;font-weight:600;color:var(--sv);border-bottom:3px solid transparent}
+.tabs{display:flex;background:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px #0002;overflow-x:auto}
+.tabs button{flex:1;padding:13px 6px;border:0;background:none;font-size:13px;font-weight:600;color:var(--sv);border-bottom:3px solid transparent;white-space:nowrap}
 .tabs button.on{color:var(--plava);border-color:var(--nar)}
 main{max-width:560px;margin:0 auto;padding:12px}
 .sek{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px}
@@ -54,7 +54,8 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 #ok div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px}
 #ok h2{color:var(--zel);margin:0 0 8px}
 #ok button{margin-top:14px;padding:12px 28px;border:0;border-radius:10px;background:var(--plava);color:#fff;font-size:16px;font-weight:700}
-/* Stilovi za bazu majstora */
+
+/* Baza majstora & Prijave saradnika */
 .card-m{background:#fff;border:2px solid var(--bd);border-radius:14px;padding:16px;margin:12px 0}
 .grid-zanati{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:10px 0}
 .zanat-cb{display:flex;align-items:center;gap:6px;background:#fff;border:2px solid var(--bd);padding:8px 10px;border-radius:10px;font-size:15px;cursor:pointer}
@@ -64,6 +65,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 .b-m{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin:10px 0;padding:12px;font:inherit;font-weight:700;font-size:17px;border:0;border-radius:12px;background:var(--plava);color:#fff;cursor:pointer;text-decoration:none}
 .b-m.ghost{background:transparent;color:var(--plava);border:2px solid var(--plava)}
 .b-m.danger{background:transparent;color:var(--bad);border:2px solid var(--bad)}
+.b-m.ok{background:var(--zel);color:#fff}
 </style>
 </head>
 <body>
@@ -72,6 +74,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <button class="on" data-t="prijava">Pozovi majstora</button>
  <button data-t="mapa">Mapa</button>
  <button data-t="status">Status</button>
+ <button data-t="postani">Postani saradnik 🤝</button>
  <button data-t="admin">Majstori 🔒</button>
 </div>
 <main>
@@ -102,6 +105,29 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 <section id="mapa-s" class="pr"><div id="mapa"></div></section>
 <section id="status" class="pr"><div id="lista"></div></section>
 
+<!-- JAVNA PRIJAVA ZA MAJSTORE I ŽENE ZA ČIŠĆENJE -->
+<section id="postani" class="pr">
+ <div class="sek">
+  <h3>🤝 Prijava za majstore i saradnike</h3>
+  <p style="font-size:14px; color:var(--sv);">Želite da radite kao majstor ili nudite usluge čišćenja i održavanja u Kladovu? Popunite formu ispod i uđite u našu bazu.</p>
+  
+  <label style="margin-top:10px; display:block; font-weight:600;">Ime i prezime / Naziv radnje</label>
+  <input id="sar-ime" placeholder="npr. Marija Marić ili Radnja hidro">
+
+  <label style="margin-top:10px; display:block; font-weight:600;">Broj telefona</label>
+  <input id="sar-tel" type="tel" placeholder="npr. 0631234567">
+
+  <label style="margin-top:10px; display:block; font-weight:600;">Usluge koje nudite (Zanati / Čišćenje)</label>
+  <div class="grid-zanati" id="sar-zanati"></div>
+
+  <label style="margin-top:10px; display:block; font-weight:600;">O sebi / Radno vreme / Napomena</label>
+  <textarea id="sar-nap" placeholder="Kratak opis vašeg iskustva, opreme ili dostupnosti..."></textarea>
+
+  <div id="sar-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+  <button class="b-m" style="margin-top:14px;" onclick="posaljiPrijavuSaradnika()">📤 Pošalji prijavu za rad</button>
+ </div>
+</section>
+
 <!-- ADMIN / BAZA MAJSTORA SA PIN-OM -->
 <section id="admin" class="pr">
  <div id="admin-sadrzaj"></div>
@@ -127,6 +153,9 @@ const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 
+// Generisanje zanata u formi za prijavu saradnika
+$("sar-zanati").innerHTML = KATS.map(z => `<label class="zanat-cb"><input type="checkbox" value="${z[1]}"> ${z[1]}</label>`).join('');
+
 const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
 OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on");pokaziSlob()};
 KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="'+i+'.webp" alt="'+n+'">';
@@ -134,7 +163,6 @@ KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat
 $("kats").appendChild(OSTALO);
 $("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
 
-// Usnimavanje slike i automatsko uzimanje GPS koordinata mesta slikanja
 $("fajl").onchange=e=>{
  foto=e.target.files[0]||null;
  if(foto){
@@ -180,7 +208,6 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();
 });
 
-// Slanje i priprema poruke sa tačnim koordinatama i poljima za majstora
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
  if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
@@ -202,7 +229,6 @@ $("slanje").onclick=async()=>{
   }
  }catch(e){}
 
- // Formatirana WhatsApp poruka sa koordinatama i poljima za odgovor majstora
  const telMajstora = TELEFON.replace(/\D/g, '');
  const mapLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : 'Nije uneta GPS lokacija';
  
@@ -269,13 +295,53 @@ async function crtajStatus(){
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
-// ===== INTEGRISANA BAZA MAJSTORA =====
-let DM;
+// ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
+let DM, Prijave;
 try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
+try { Prijave = JSON.parse(localStorage.getItem('prijave_kladovo')); } catch(e) {}
 DM = DM || { majstori: [] };
+Prijave = Prijave || [];
+
 let VM = { p: 'home', filter: '' }, armedM = '';
 const saveM = () => { try { localStorage.setItem('majstori_kladovo', JSON.stringify(DM)); } catch(e) {} };
+const saveP = () => { try { localStorage.setItem('prijave_kladovo', JSON.stringify(Prijave)); } catch(e) {} };
 const uidM = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+function posaljiPrijavuSaradnika() {
+ const ime = $('sar-ime').value.trim();
+ const tel = $('sar-tel').value.trim();
+ const nap = $('sar-nap').value.trim();
+ const usluge = [...document.querySelectorAll('#sar-zanati input[type="checkbox"]:checked')].map(x => x.value);
+
+ if(!ime || !tel) { $('sar-err').textContent = 'Unesite vaše ime i telefon.'; return; }
+ if(usluge.length === 0) { $('sar-err').textContent = 'Izaberite bar jednu uslugu koju nudite.'; return; }
+
+ const novaPrijava = { id: uidM(), ime, telefon: tel, usluge, napomena: nap, datum: new Date().toISOString().slice(0,10) };
+ Prijave.push(novaPrijava);
+ saveP();
+
+ alert('✅ Vaša prijava je uspešno poslata! Administrator će vas kontaktirati nakon provere.');
+ $('sar-ime').value = ''; $('sar-tel').value = ''; $('sar-nap').value = '';
+ document.querySelectorAll('#sar-zanati input[type="checkbox"]').forEach(c => c.checked = false);
+ $('sar-err').textContent = '';
+}
+
+function odobriPrijavu(id) {
+ const index = Prijave.findIndex(p => p.id == id);
+ if(index > -1) {
+  const p = Prijave[index];
+  DM.majstori.push({ id: uidM(), ime: p.ime, telefon: p.telefon, usluge: p.usluge, napomena: p.napomena, datum: p.datum });
+  Prijave.splice(index, 1);
+  saveM(); saveP();
+  renderM();
+ }
+}
+
+function odbijPrijavu(id) {
+ Prijave = Prijave.filter(p => p.id != id);
+ saveP();
+ renderM();
+}
 
 function initMajstoriApp() { renderM(); }
 const goM = (p, id) => { VM = { p, id, filter: VM.filter }; armedM = ''; renderM(); };
@@ -295,17 +361,36 @@ function renderM() {
     const lista = VM.filter ? DM.majstori.filter(m => m.usluge && m.usluge.includes(VM.filter)) : DM.majstori;
     container.innerHTML = `
       <div class="sek" style="text-align:center; background:var(--plava); color:#fff; border-radius:14px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:22px; color:#fff;">📋 Baza Majstora</h2>
-        <div style="font-size:14px; opacity:0.9;">Upravljanje i slanje poslova</div>
+        <h2 style="margin:0; font-size:22px; color:#fff;">📋 Admin Panel</h2>
+        <div style="font-size:14px; opacity:0.9;">Baza majstora i odobravanje prijava</div>
       </div>
-      <button class="b-m" onclick="goM('majstorNew')">+ Dodaj novog majstora</button>
+
+      ${Prijave.length > 0 ? `
+        <div class="sek" style="border:2px solid var(--nar); background:#fff9f5;">
+          <h3 style="color:var(--nar); margin:0 0 10px;">📥 Prijave na čekanju (${Prijave.length})</h3>
+          ${Prijave.map(p => `
+            <div class="card-m" style="border-color:#fce4d6;">
+              <b style="font-size:17px;">${esc(p.ime)}</b>
+              <div style="color:var(--sv); font-size:14px;">📞 ${esc(p.telefon)}</div>
+              <div class="tags">${(p.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}</div>
+              ${p.napomena ? `<div style="font-size:13px; margin-top:6px; color:#555;">${esc(p.napomena)}</div>` : ''}
+              <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="b-m ok" style="min-height:40px; font-size:15px;" onclick="odobriPrijavu('${p.id}')">✅ Odobri</button>
+                <button class="b-m danger" style="min-height:40px; font-size:15px;" onclick="odbijPrijavu('${p.id}')">❌ Odbij</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <button class="b-m" onclick="goM('majstorNew')">+ Dodaj novog majstora ručno</button>
       <label for="flt" style="margin-top:12px;">Filtriraj po struci / zanatu:</label>
       <select id="flt" onchange="VM.filter = this.value; renderM();">
         <option value="">— Svi majstori (${DM.majstori.length}) —</option>
         ${KATS.map(z => `<option value="${z[1]}" ${VM.filter==z[1]?'selected':''}>${z[1]}</option>`).join('')}
       </select>
-      <h3 style="margin-top:20px;">Spisak majstora (${lista.length})</h3>
-      ${lista.length === 0 ? '<p style="color:var(--sv)">Trenutno nema unetih majstora.</p>' : ''}
+      <h3 style="margin-top:20px;">Spisak aktivnih majstora (${lista.length})</h3>
+      ${lista.length === 0 ? '<p style="color:var(--sv)">Trenutno nema aktivnih majstora.</p>' : ''}
       ${lista.map(m => `
         <div class="card-m" onclick="goM('majstorV','${m.id}')" style="cursor:pointer">
           <div style="display:flex; justify-content:space-between; align-items:center">
@@ -325,7 +410,7 @@ function renderM() {
   } else if(VM.p === 'majstorNew') {
     container.innerHTML = `
       <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
-      <h3 style="margin-top:14px;">Dodaj novog majstora</h3>
+      <h3 style="margin-top:14px;">Dodaj novog majstora ručno</h3>
       <label>Ime i prezime / Naziv radnje</label>
       <input id="mn-ime" placeholder="npr. Petar Petrović">
       <label>Telefon</label>
