@@ -169,7 +169,7 @@ let adminAutorizovan = false;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin" && !adminAutorizovan){
-  const pin=prompt("Unesite 4-cifreni Admin PIN:");
+  const pin=prompt("Unesite Admin PIN:");
   if(pin !== ADMIN_PIN){ alert("Pogrešan PIN!"); return; }
   adminAutorizovan = true;
   initMajstoriApp();
