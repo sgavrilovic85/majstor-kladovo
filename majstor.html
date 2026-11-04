@@ -1,0 +1,395 @@
+﻿<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Majstor Kladovo — Baza Majstora</title>
+<style>
+:root {
+  --bg: #f2f4f1;
+  --card: #ffffff;
+  --tx: #1d2a27;
+  --mu: #5b6b66;
+  --pr: #1e3a8a; /* Deep blue theme for Majstor Kladovo */
+  --prx: #ffffff;
+  --bad: #b3261e;
+  --ok: #17703f;
+  --bd: #d5dcd8;
+  --tag-bg: #e2e8f0;
+  --tag-tx: #334155;
+  box-sizing: border-box;
+}
+
+@media(prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --tx: #f8fafc;
+    --mu: #94a3b8;
+    --pr: #3b82f6;
+    --prx: #0f172a;
+    --bad: #ef4444;
+    --ok: #10b981;
+    --bd: #334155;
+    --tag-bg: #334155;
+    --tag-tx: #cbd5e1;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tx);
+  font: 19px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+#app {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+h1 { font-size: 26px; margin: 8px 0 16px; text-align: center; }
+h2 { font-size: 20px; margin: 20px 0 8px; }
+.mu { color: var(--mu); font-size: 16px; }
+
+.card {
+  background: var(--card);
+  border: 2px solid var(--bd);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 54px;
+  margin: 10px 0;
+  padding: 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--pr);
+  color: var(--prx);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.b.ghost {
+  background: transparent;
+  color: var(--pr);
+  border: 2px solid var(--pr);
+  min-height: 48px;
+  font-size: 17px;
+}
+
+.b.danger {
+  background: transparent;
+  color: var(--bad);
+  border: 2px solid var(--bad);
+  min-height: 48px;
+  font-size: 16px;
+}
+
+label {
+  display: block;
+  margin: 14px 0 6px;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+input, select, textarea {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--tx);
+  background: var(--card);
+  border: 2px solid var(--bd);
+  border-radius: 12px;
+}
+
+textarea { min-height: 100px; }
+
+.grid-zanati {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.zanat-cb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 2px solid var(--bd);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.zanat-cb input {
+  width: 18px;
+  height: 18px;
+  min-height: auto;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag {
+  background: var(--tag-bg);
+  color: var(--tag-tx);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.err { color: var(--bad); font-weight: 600; min-height: 1.4em; margin-top: 6px; }
+.header-bar {
+  background: var(--pr);
+  color: var(--prx);
+  padding: 16px;
+  border-radius: 14px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.header-bar h1 { margin: 0; font-size: 24px; color: var(--prx); }
+</style>
+</head>
+<body>
+
+<main id="app"></main>
+
+<script>
+const SVE_USLUGE = [
+  "Vodoinstalater", "Električar", "Grejanje / Klima", "Čišćenje",
+  "Limar", "Lift", "Pomoć u kući", "Keramičar", 
+  "Moler", "Bašta / Dvorište", "Građevinar", "Stolar"
+];
+
+let D;
+try {
+  D = JSON.parse(localStorage.getItem('majstori_kladovo'));
+} catch(e) {}
+
+D = D || { majstori: [] };
+
+let V = { p: 'home' }, armed = '';
+
+const save = () => {
+  try { localStorage.setItem('majstori_kladovo', JSON.stringify(D)); } catch(e) {}
+};
+
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+const go = (p, id) => { V = { p, id }; armed = ''; render(); scrollTo(0,0); };
+const back = p => `<button class="b ghost" onclick="go('${p}')">← Nazad</button>`;
+const dbtn = (id) => `<button class="b danger" onclick="delMajstor('${id}')">${armed == id ? 'Pritisnite opet za brisanje' : '🗑 Obriši majstora'}</button>`;
+
+function delMajstor(id) {
+  if (armed != id) {
+    armed = id;
+    render();
+    return;
+  }
+  D.majstori = D.majstori.filter(m => m.id != id);
+  save();
+  go('home');
+}
+
+function err(m) { $('#e').textContent = m; }
+
+function home() {
+  const filterZanat = V.filter || '';
+  const lista = filterZanat 
+    ? D.majstori.filter(m => m.usluge && m.usluge.includes(filterZanat))
+    : D.majstori;
+
+  app.innerHTML = `
+    <div class="header-bar">
+      <h1>🛠️ Majstor Kladovo</h1>
+      <div style="font-size:15px; opacity:0.9;">Baza majstora i zanatlija</div>
+    </div>
+
+    <button class="b" onclick="go('majstorNew')">＋ Dodaj novog majstora</button>
+    
+    <label for="flt">Filtriraj po struci / zanatu:</label>
+    <select id="flt" onchange="V.filter = this.value; render();">
+      <option value="">— Svi majstori (${D.majstori.length}) —</option>
+      ${SVE_USLUGE.map(z => `<option value="${z}" ${filterZanat==z?'selected':''}>${z}</option>`).join('')}
+    </select>
+
+    <h2>Spisak majstora (${lista.length})</h2>
+    ${lista.length === 0 ? '<p class="mu">Trenutno nema unetih majstora za prikaz.</p>' : ''}
+    
+    ${lista.map(m => `
+      <div class="card" onclick="go('majstorV','${m.id}')" style="cursor:pointer">
+        <div class="row">
+          <div>
+            <b style="font-size:20px;">${esc(m.ime)}</b>
+            <div class="mu">📞 ${esc(m.telefon)}</div>
+          </div>
+          <div>➔</div>
+        </div>
+        <div class="tags">
+          ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+        </div>
+      </div>
+    `).join('')}
+
+    <button class="b ghost" style="margin-top:24px;" onclick="go('bk')">💾 Rezervna kopija (Uvoz/Izvoz)</button>
+  `;
+}
+
+function majstorNew() {
+  app.innerHTML = back('home') + `
+    <h1>Dodaj novog majstora</h1>
+    
+    <label for="n">Ime i prezime / Naziv radnje</label>
+    <input id="n" placeholder="npr. Petar Petrović">
+    
+    <label for="t">Telefon</label>
+    <input id="t" type="tel" placeholder="npr. 0631234567">
+    
+    <label>Izaberite usluge / zanate:</label>
+    <div class="grid-zanati">
+      ${SVE_USLUGE.map(z => `
+        <label class="zanat-cb">
+          <input type="checkbox" value="${z}"> ${z}
+        </label>
+      `).join('')}
+    </div>
+
+    <label for="np">Napomena (opciono)</label>
+    <textarea id="np" placeholder="npr. Radno vreme, cenovnik ili dodatne informacije..."></textarea>
+
+    <div class="err" id="e"></div>
+    <button class="b" onclick="addMajstor()">Sačuvaj majstora</button>
+  `;
+}
+
+function addMajstor() {
+  const ime = $('#n').value.trim();
+  const telefon = $('#t').value.trim();
+  const napomena = $('#np').value.trim();
+  
+  const usluge = [];
+  document.querySelectorAll('.grid-zanati input[type="checkbox"]:checked').forEach(cb => {
+    usluge.push(cb.value);
+  });
+
+  if (!ime || !telefon) return err('Molimo unesite ime i telefon majstora.');
+  if (usluge.length === 0) return err('Izaberite bar jednu uslugu.');
+
+  D.majstori.push({
+    id: uid(),
+    ime: ime,
+    telefon: telefon,
+    usluge: usluge,
+    napomena: napomena,
+    datum: new Date().toISOString().slice(0,10)
+  });
+
+  save();
+  go('home');
+}
+
+function majstorV() {
+  const m = D.majstori.find(x => x.id == V.id);
+  if (!m) return go('home');
+
+  const telClean = m.telefon.replace(/\D/g, '');
+  const waNum = telClean.startsWith('0') ? '381' + telClean.slice(1) : telClean;
+
+  app.innerHTML = back('home') + `
+    <h1>${esc(m.ime)}</h1>
+    
+    <div class="card">
+      <div class="mu">Telefon</div>
+      <div style="font-size:22px; font-weight:700; margin-bottom:8px;">${esc(m.telefon)}</div>
+      
+      <div class="mu">Usluge / Zanati</div>
+      <div class="tags" style="margin-bottom:12px;">
+        ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+      </div>
+
+      ${m.napomena ? `<div class="mu">Napomena</div><div>${esc(m.napomena)}</div>` : ''}
+    </div>
+
+    <a class="b" href="tel:${esc(m.telefon)}">📞 Pozovi majstora</a>
+    <a class="b ghost" href="https://wa.me/${waNum}" target="_blank">💬 Pošalji WhatsApp poruku</a>
+
+    <div style="margin-top:20px;">
+      ${dbtn(m.id)}
+    </div>
+  `;
+}
+
+function bk() {
+  app.innerHTML = back('home') + `
+    <h1>Rezervna kopija</h1>
+    <p class="mu">Podaci se bezbedno čuvaju u vašem pretraživaču. Ovde možete napraviti kopiju ili učitati podatke sa drugog uređaja.</p>
+    
+    <textarea id="t" aria-label="Podaci">${esc(JSON.stringify(D))}</textarea>
+    <div class="err" id="e"></div>
+    
+    <button class="b" onclick="cp()">📋 Kopiraj podatke</button>
+    <button class="b ghost" onclick="ld()">Učitaj podatke iz teksta</button>
+  `;
+}
+
+function cp() {
+  const t = $('#t');
+  t.select();
+  try {
+    document.execCommand('copy');
+    err('Podaci su uspešno kopirani!');
+  } catch(e) {
+    err('Kopiranje nije uspelo. Označite tekst i kopirajte ručno.');
+  }
+}
+
+function ld() {
+  try {
+    const x = JSON.parse($('#t').value);
+    if (!x.majstori) throw 0;
+    D = x;
+    save();
+    go('home');
+  } catch(e) {
+    err('Tekst nije u ispravnom formatu. Zalepite važeći rezervni kod.');
+  }
+}
+
+function render() {
+  ({ home, majstorNew, majstorV, bk })[V.p]();
+}
+
+render();
+</script>
+</body>
+</html>
