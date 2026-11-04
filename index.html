@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-:root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
+:root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385;--bad:#b3261e;--bd:#d5dcd8}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:84px}
 header{background:var(--plava);color:#fff;text-align:center;padding:14px 12px 12px}
@@ -33,7 +33,7 @@ main{max-width:560px;margin:0 auto;padding:12px}
 .hit button.on{border-color:var(--plava);background:#e9effc}
 .foto{display:block;width:100%;padding:16px;border:2px dashed var(--plava);border-radius:12px;background:#f5f8ff;color:var(--plava);font-size:17px;font-weight:700;text-align:center}
 #pre{display:none;width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:10px}
-input,textarea{width:100%;padding:12px;border:1px solid #cfd5e3;border-radius:10px;font-size:16px;font-family:inherit}
+input,textarea,select{width:100%;padding:12px;border:2px solid var(--bd);border-radius:12px;font-size:16px;font-family:inherit;background:#fff}
 textarea{min-height:80px;resize:vertical}
 .red{display:flex;gap:8px;margin-top:8px}
 .mali{flex:1;padding:11px;border-radius:10px;border:1px solid #cfd5e3;background:#fff;font-size:14px;font-weight:600}
@@ -54,6 +54,16 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 #ok div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px}
 #ok h2{color:var(--zel);margin:0 0 8px}
 #ok button{margin-top:14px;padding:12px 28px;border:0;border-radius:10px;background:var(--plava);color:#fff;font-size:16px;font-weight:700}
+/* Stilovi za bazu majstora unutar admin taba */
+.card-m{background:#fff;border:2px solid var(--bd);border-radius:14px;padding:16px;margin:12px 0}
+.grid-zanati{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:10px 0}
+.zanat-cb{display:flex;align-items:center;gap:6px;background:#fff;border:2px solid var(--bd);padding:8px 10px;border-radius:10px;font-size:15px;cursor:pointer}
+.zanat-cb input{width:18px;height:18px;min-height:auto}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{background:#e2e8f0;color:#334155;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:600}
+.b-m{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin:10px 0;padding:12px;font:inherit;font-weight:700;font-size:17px;border:0;border-radius:12px;background:var(--plava);color:#fff;cursor:pointer;text-decoration:none}
+.b-m.ghost{background:transparent;color:var(--plava);border:2px solid var(--plava)}
+.b-m.danger{background:transparent;color:var(--bad);border:2px solid var(--bad)}
 </style>
 </head>
 <body>
@@ -89,20 +99,16 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
   <input id="tel" type="tel" inputmode="tel" placeholder="06x xxx xxxx"></div>
  <small class="n">Majstor će vas nazvati u najkraćem roku.</small>
 </section>
+
 <section id="mapa-s" class="pr"><div id="mapa"></div></section>
 <section id="status" class="pr"><div id="lista"></div></section>
-<section id="admin" class="pr"><div class="sek">
- <h3>BAZA MAJSTORA</h3><div id="majstori-list"></div>
- <button class="mali" onclick="ucitajMajstore()" style="margin:10px 0 18px;width:100%">↻ OSVEŽI LISTU</button>
- <h3>DODAJ NOVOG MAJSTORA</h3>
- <input id="m-ime" placeholder="Ime i prezime" style="margin-bottom:8px">
- <input id="m-telefon" type="tel" placeholder="Telefon, npr. 0631234567" style="margin-bottom:8px">
- <b style="font-size:13px">KATEGORIJE (može više)</b><div id="m-kats" style="margin:6px 0 8px"></div>
- <b style="font-size:13px">PRIORITET (1 = glavni majstor, prvi dobija pozive)</b>
- <input id="m-prioritet" type="number" value="1" min="1" style="margin:6px 0 12px">
- <button class="mali" style="width:100%;background:var(--plava);color:#fff;padding:13px" onclick="dodajMajstora()">SAČUVAJ MAJSTORA</button>
-</div></section>
+
+<!-- ADMIN / BAZA MAJSTORA SA PIN-OM -->
+<section id="admin" class="pr">
+ <div id="admin-sadrzaj"></div>
+</section>
 </main>
+
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381000000000">📞 Pozovi</a>
  <button id="slanje">Pošalji poziv majstoru</button>
@@ -115,8 +121,9 @@ const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
 const IZLAZAK = 3000;
 const MEJL = "sredikladovo@gmail.com";
+const ADMIN_PIN = "1234"; // Vaš 4-cifreni PIN za pristup bazi majstora
 
-const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
+const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
@@ -138,14 +145,20 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
-let ADMIN="";
+let adminAutorizovan = false;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
- if(t==="admin"&&!ADMIN){const pin=prompt("Admin PIN:");if(!pin)return;ADMIN=pin.trim()}
+ if(t==="admin" && !adminAutorizovan){
+  const pin=prompt("Unesite 4-cifreni Admin PIN:");
+  if(pin !== ADMIN_PIN){ alert("Pogrešan PIN!"); return; }
+  adminAutorizovan = true;
+  initMajstoriApp();
+ }
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
  $("dno").style.display=t==="prijava"?"flex":"none";
- if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();if(t==="admin")ucitajMajstore();});
+ if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();
+});
 
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
@@ -192,26 +205,148 @@ async function crtajStatus(){
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
-$("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
-async function ucitajMajstore(){
- const el=$("majstori-list");el.textContent="Učitavanje...";
- if(!sb){el.textContent="Supabase nije podešen.";return}
- const r=await sb.rpc("a_majstori",{p_admin:ADMIN});
- if(r.error){if(/PIN/.test(r.error.message)){ADMIN="";el.innerHTML="<b style='color:#c00'>Pogrešan PIN. Klikni ponovo na tab Majstori.</b>"}else el.innerHTML="<b style='color:#c00'>Greška: "+esc(r.error.message)+"</b>";return}
- el.innerHTML=r.data.length?r.data.map(m=>`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center">
-  <div><b>${esc(m.ime)} ${m.prioritet===1?"⭐":""}</b> <small>(prioritet ${esc(m.prioritet)})</small><br>
-  <small>${esc((m.kategorije||[]).join(", ")||"bez kategorija")}<br>📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin)}</b></small></div>
-  <button class="mali" style="flex:none;background:#e53e3e;color:#fff;border:0" onclick="obrisiMajstora(${m.id})">Obriši</button></div>`).join(""):"Nema majstora.";}
-async function dodajMajstora(){
- const ime=$("m-ime").value.trim(),tel=$("m-telefon").value.trim(),pr=parseInt($("m-prioritet").value)||1;
- const kk=[...document.querySelectorAll("#m-kats input:checked")].map(x=>x.value);
- if(!ime||!tel||!kk.length)return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
- const r=await sb.rpc("a_dodaj",{p_admin:ADMIN,p_ime:ime,p_telefon:tel,p_kat:kk,p_prioritet:pr});
- if(r.error)return alert("Greška: "+r.error.message);
- alert("Majstor dodat ✅\nNjegov PIN za panel: "+r.data+"\n(pošalji mu ga)");
- ["m-ime","m-telefon"].forEach(i=>$(i).value="");document.querySelectorAll("#m-kats input").forEach(x=>x.checked=false);ucitajMajstore();}
-async function obrisiMajstora(id){if(!confirm("Obrisati majstora?"))return;
- const r=await sb.rpc("a_obrisi",{p_admin:ADMIN,p_id:id});if(r.error)alert(r.error.message);ucitajMajstore();}
+// ===== INTEGRISANA BAZA MAJSTORA (iz Majstor Kladovo) =====
+let DM;
+try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
+DM = DM || { majstori: [] };
+let VM = { p: 'home', filter: '' }, armedM = '';
+const saveM = () => { try { localStorage.setItem('majstori_kladovo', JSON.stringify(DM)); } catch(e) {} };
+const uidM = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+function initMajstoriApp() { renderM(); }
+const goM = (p, id) => { VM = { p, id, filter: VM.filter }; armedM = ''; renderM(); };
+
+function delMajstorM(id) {
+  if (armedM != id) { armedM = id; renderM(); return; }
+  DM.majstori = DM.majstori.filter(m => m.id != id);
+  saveM();
+  goM('home');
+}
+
+function renderM() {
+  const container = $('admin-sadrzaj');
+  if(!container) return;
+  
+  if(VM.p === 'home') {
+    const lista = VM.filter ? DM.majstori.filter(m => m.usluge && m.usluge.includes(VM.filter)) : DM.majstori;
+    container.innerHTML = `
+      <div class="sek" style="text-align:center; background:var(--plava); color:#fff; border-radius:14px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:22px; color:#fff;">📋 Majstor Kladovo</h2>
+        <div style="font-size:14px; opacity:0.9;">Baza majstora i zanatlija</div>
+      </div>
+      <button class="b-m" onclick="goM('majstorNew')">+ Dodaj novog majstora</button>
+      <label for="flt" style="margin-top:12px;">Filtriraj po struci / zanatu:</label>
+      <select id="flt" onchange="VM.filter = this.value; renderM();">
+        <option value="">— Svi majstori (${DM.majstori.length}) —</option>
+        ${KATS.map(z => `<option value="${z[1]}" ${VM.filter==z[1]?'selected':''}>${z[1]}</option>`).join('')}
+      </select>
+      <h3 style="margin-top:20px;">Spisak majstora (${lista.length})</h3>
+      ${lista.length === 0 ? '<p style="color:var(--sv)">Trenutno nema unetih majstora za prikaz.</p>' : ''}
+      ${lista.map(m => `
+        <div class="card-m" onclick="goM('majstorV','${m.id}')" style="cursor:pointer">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div>
+              <b style="font-size:18px;">${esc(m.ime)}</b>
+              <div style="color:var(--sv); font-size:14px;">📞 ${esc(m.telefon)}</div>
+            </div>
+            <div>➡️</div>
+          </div>
+          <div class="tags">
+            ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <button class="b-m ghost" style="margin-top:24px;" onclick="goM('bk')">💾 Rezervna kopija (Uvoz/Izvoz)</button>
+    `;
+  } else if(VM.p === 'majstorNew') {
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">Dodaj novog majstora</h3>
+      <label>Ime i prezime / Naziv radnje</label>
+      <input id="mn-ime" placeholder="npr. Petar Petrović">
+      <label>Telefon</label>
+      <input id="mn-tel" type="tel" placeholder="npr. 0631234567">
+      <label style="margin-top:12px;">Izaberite usluge / zanate:</label>
+      <div class="grid-zanati">
+        ${KATS.map(z => `
+          <label class="zanat-cb">
+            <input type="checkbox" value="${z[1]}"> ${z[1]}
+          </label>
+        `).join('')}
+      </div>
+      <label style="margin-top:12px;">Napomena (opciono)</label>
+      <textarea id="mn-nap" placeholder="Radno vreme, cenovnik..."></textarea>
+      <div id="mn-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+      <button class="b-m" style="margin-top:16px;" onclick="saveNewMajstor()">Sačuvaj majstora</button>
+    `;
+  } else if(VM.p === 'majstorV') {
+    const m = DM.majstori.find(x => x.id == VM.id);
+    if(!m) { goM('home'); return; }
+    const telClean = m.telefon.replace(/\D/g, '');
+    const waNum = telClean.startsWith('0') ? '381' + telClean.slice(1) : telClean;
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">${esc(m.ime)}</h3>
+      <div class="card-m">
+        <div style="color:var(--sv); font-size:14px;">Telefon</div>
+        <div style="font-size:20px; font-weight:700; margin-bottom:8px;">${esc(m.telefon)}</div>
+        <div style="color:var(--sv); font-size:14px;">Usluge / Zanati</div>
+        <div class="tags" style="margin-bottom:12px;">
+          ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+        </div>
+        ${m.napomena ? `<div style="color:var(--sv); font-size:14px;">Napomena</div><div>${esc(m.napomena)}</div>` : ''}
+      </div>
+      <a class="b-m" href="tel:${esc(m.telefon)}">📞 Pozovi majstora</a>
+      <a class="b-m ghost" href="https://wa.me/${waNum}" target="_blank">💬 Pošalji WhatsApp poruku</a>
+      <div style="margin-top:20px;">
+        <button class="b-m danger" onclick="delMajstorM('${m.id}')">${armedM == m.id ? 'Pritisnite opet za brisanje' : '🗑️ Obriši majstora'}</button>
+      </div>
+    `;
+  } else if(VM.p === 'bk') {
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">Rezervna kopija</h3>
+      <p style="color:var(--sv); font-size:15px;">Podaci baze majstora. Ovde možete kopirati ili učitati podatke.</p>
+      <textarea id="bk-tekst" style="min-height:140px;">${esc(JSON.stringify(DM))}</textarea>
+      <div id="bk-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+      <button class="b-m" style="margin-top:12px;" onclick="copyBk()">📋 Kopiraj podatke</button>
+      <button class="b-m ghost" onclick="loadBk()">Učitaj podatke iz teksta</button>
+    `;
+  }
+}
+
+function saveNewMajstor() {
+  const ime = $('mn-ime').value.trim();
+  const tel = $('mn-tel').value.trim();
+  const nap = $('mn-nap').value.trim();
+  const usluge = [...document.querySelectorAll('.grid-zanati input[type="checkbox"]:checked')].map(x => x.value);
+  
+  if(!ime || !tel) { $('mn-err').textContent = 'Unesite ime i telefon.'; return; }
+  if(usluge.length === 0) { $('mn-err').textContent = 'Izaberite bar jednu uslugu.'; return; }
+  
+  DM.majstori.push({ id: uidM(), ime, telefon: tel, usluge, napomena: nap, datum: new Date().toISOString().slice(0,10) });
+  saveM();
+  goM('home');
+}
+
+function copyBk() {
+  const t = $('bk-tekst');
+  t.select();
+  try { document.execCommand('copy'); $('bk-err').style.color='var(--zel)'; $('bk-err').textContent = 'Podaci uspešno kopirani!'; }
+  catch(e) { $('bk-err').textContent = 'Kopiranje nije uspelo.'; }
+}
+
+function loadBk() {
+  try {
+    const x = JSON.parse($('bk-tekst').value);
+    if(!x.majstori) throw 0;
+    DM = x;
+    saveM();
+    goM('home');
+  } catch(e) {
+    $('bk-err').textContent = 'Neispravan format teksta.';
+  }
+}
 </script>
 </body>
 </html>
