@@ -1,6 +1,6 @@
 {
   "name": "Majstor na terenu",
-  "short_name": "Majstori",
+  "short_name": "Majstor na terenu",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
