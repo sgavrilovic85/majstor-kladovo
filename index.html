@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Majstor na terenu – Kladovo</title>
- <link rel="icon" href="logo.jpg" type="image/jpeg">
+<link rel="icon" href="logo.jpg" type="image/jpeg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -48,7 +48,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 .st b{display:block}
 .bedz{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
 .Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
-.nap{background:#fff7e6;border:1px solid #f3d49a;border-radius:12px;padding:11px;font-size:14px;margin-bottom:12px}.Ponuda{background:#2563eb}
+.nap{background:#fff7e6;border:1px solid #f3d49a;border-radius:12px;padding:11px;font-size:14px;margin-bottom:12px}
 .pr{display:none}.pr.on{display:block}
 #ok{display:none;position:fixed;inset:0;background:#000a;z-index:50;align-items:center;justify-content:center;padding:20px}
 #ok div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px}
@@ -57,22 +57,6 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 </style>
 </head>
 <body>
-<!--
-SUPABASE SQL (pokreni jednom u SQL Editor):
-
-create table pozivi(
- id bigint generated always as identity primary key,
- created_at timestamptz default now(),
- kategorija text, hitnost text, opis text, adresa text, telefon text,
- lat double precision, lng double precision, foto_url text,
- status text default 'Novo', zavrseno_at timestamptz);
-alter table pozivi enable row level security;
-create policy "svi salju" on pozivi for insert to anon with check (true);
-create view pozivi_javno as select id,created_at,kategorija,hitnost,adresa,lat,lng,foto_url,status,zavrseno_at from pozivi;
-grant select on pozivi_javno to anon;
--- bucket "photos" (public) vec imas; dozvoli upload:
-create policy "upload foto" on storage.objects for insert to anon with check (bucket_id='photos');
--->
 <header><h1>🛠️ Majstor na terenu</h1><p>Uslikaj kvar, mi šaljemo majstora – Kladovo</p></header>
 <div class="tabs">
  <button class="on" data-t="prijava">Pozovi majstora</button>
@@ -126,13 +110,12 @@ create policy "upload foto" on storage.objects for insert to anon with check (bu
 <div id="ok"><div><h2>✅ Poziv poslat!</h2><p>Javićemo vam se uskoro.</p><button onclick="this.closest('#ok').style.display='none'">U redu</button></div></div>
 
 <script>
-// ===== PODEŠAVANJA (popuni) =====
 const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
-const IZLAZAK = 3000;   // cena samo izlaska majstora na teren (din)   // broj za dugme Pozovi
-const MEJL = "sredikladovo@gmail.com"; // rezerva ako baza nije podešena
-// =================================
+const IZLAZAK = 3000;
+const MEJL = "sredikladovo@gmail.com";
+
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
@@ -209,7 +192,6 @@ async function crtajStatus(){
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
-// ===== ADMIN: majstori (PIN se proverava u bazi) =====
 $("m-kats").innerHTML=KATS.map(k=>k[1]).concat("Ostalo").map(n=>`<label style="display:inline-block;margin:0 10px 6px 0;font-size:14px"><input type="checkbox" value="${esc(n)}" style="width:auto;margin:0 5px 0 0;vertical-align:middle">${esc(n)}</label>`).join("");
 async function ucitajMajstore(){
  const el=$("majstori-list");el.textContent="Učitavanje...";
