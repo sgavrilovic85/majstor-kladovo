@@ -1,103 +1,117 @@
 <!DOCTYPE html>
-<html lang="sr"><head><meta charset="utf-8">
+<html lang="sr">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel majstora</title>
+<title>Baza majstora - Majstor na terenu</title>
+<link rel="icon" href="logo.jpg" type="image/jpeg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-:root{--p:#1b3a7a;--n:#f26a1b;--z:#1f9d55}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f2f4f8;color:#1d2433}
-header{background:var(--p);color:#fff;text-align:center;padding:14px}header h1{margin:0;font-size:20px}
-main{max-width:560px;margin:0 auto;padding:12px}
-.k{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px}
-input,textarea,select{width:100%;padding:11px;border:1px solid #cfd5e3;border-radius:10px;font-size:16px;font-family:inherit;margin-top:6px}
-button{padding:12px;border:0;border-radius:10px;font-size:15px;font-weight:700;background:var(--p);color:#fff}
-.nar{background:var(--n)}.zel{background:var(--z)}.sv{background:#e6e9f1;color:#1d2433}
-.tabs{display:flex;background:#fff;position:sticky;top:0;z-index:5;box-shadow:0 1px 4px #0002}
-.tabs button{flex:1;background:none;color:#6b7385;border-radius:0;border-bottom:3px solid transparent}
-.tabs button.on{color:var(--p);border-color:var(--n)}
-.p{display:none}.p.on{display:block}
-.poz{display:flex;gap:10px}.poz img{width:96px;height:96px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips button{padding:7px 10px;font-size:13px;background:#e9effc;color:var(--p)}
-.red{display:flex;gap:8px;margin-top:8px}.red>*{flex:1}
-.b{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;color:#fff;background:#d94b3d}
-.dani{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.dani button{background:#fff;color:#1d2433;border:2px solid #dde2ee;padding:9px 2px;font-size:13px}
-.dani button.on{background:var(--z);color:#fff;border-color:var(--z)}
-a{color:var(--p);font-weight:700}
-</style></head><body>
-<header><h1>🛠️ Panel majstora</h1></header>
+:root{--plava:#1b3a7a;--nar:#f261b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:40px}
+header{background:var(--plava);color:#fff;text-align:center;padding:14px 12px 12px}
+header h1{margin:0;font-size:22px}
+main{max-width:560px;margin:20px auto;padding:12px}
+.sek{background:var(--k);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #0001}
+.sek h3{margin:0 0 10px;font-size:16px}
+input,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-top:6px}
+button.glavno{width:100%;background:var(--plava);color:#fff;border:0;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛠️ Upravljanje bazom majstora</h1>
+</header>
+
 <main>
-<div class="k" id="login"><b>Unesite vaš PIN</b>
- <input id="pin" type="password" inputmode="numeric" placeholder="PIN (6 cifara)">
- <div class="red"><button class="nar" onclick="ulaz()">Uđi</button></div></div>
-<div id="app" style="display:none">
- <div class="k"><b id="ime"></b></div>
- <div class="tabs"><button class="on" data-t="poz">Pozivi</button><button data-t="cen">Cenovnik</button><button data-t="kal">Kalendar</button></div>
- <div style="height:12px"></div>
- <section class="p on" id="poz"></section>
- <section class="p" id="cen"><div class="k"><div id="redovi"></div>
-  <div class="red"><button class="sv" onclick="cen.push({naziv:'',cena:''});crtCen()">+ Dodaj uslugu</button><button class="zel" onclick="snimiCen()">Sačuvaj</button></div></div></section>
- <section class="p" id="kal"><div class="k"><b>Obeleži dane kad si slobodan</b><p style="font-size:13px;color:#6b7385;margin:4px 0 10px">Zeleno = slobodan. Klijenti vide najbliži slobodan termin.</p>
-  <div class="dani" id="dani"></div><div class="red"><button class="zel" onclick="snimiKal()">Sačuvaj kalendar</button></div></div></section>
-</div>
+  <div class="sek">
+    <button onclick="ucitajMajstore()" style="width:100%;margin-bottom:15px;padding:10px;background:#e2e8f0;border:0;border-radius:8px;font-weight:bold;cursor:pointer">🔄 OSVEŽI LISTU</button>
+    <div id="majstori-list">Učitavanje...</div>
+    
+    <hr style="margin:20px 0;border:0;border-top:1px solid #eee">
+    
+    <h3>DODAJ NOVOG MAJSTORA</h3>
+    <input type="text" id="m-ime" placeholder="Ime i prezime">
+    <input type="text" id="m-telefon" placeholder="Telefon, npr. 0631234567">
+    <div id="m-kats" style="margin:10px 0"></div>
+    <button class="glavno" onclick="dodajMajstora()">SAČUVAJ MAJSTORA</button>
+  </div>
 </main>
+
 <script>
-const SUPABASE_URL="https://ulbqtvdcepkgawcdfqud.supabase.co";
-const SUPABASE_KEY="sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
-const IZLAZAK=3000;
-const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fd=s=>s?new Date(s).toLocaleDateString("sr-RS",{day:"2-digit",month:"2-digit",year:"numeric"}):"";
-const sb=(SUPABASE_URL&&SUPABASE_KEY)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
-let PIN="",M=null,cen=[],dani=new Set(),lista=[];
-try{$("pin").value=localStorage.getItem("mpin")||""}catch(e){}
+const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
+const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function ulaz(){
- if(!sb)return alert("Dodaj Supabase ključeve u kod.");
- const pin=$("pin").value.trim();
- const r=await sb.rpc("m_prijava",{p_pin:pin});
- if(r.error||!r.data)return alert("Pogrešan PIN.");
- PIN=pin;M=r.data;try{localStorage.setItem("mpin",pin)}catch(e){}
- cen=M.cenovnik||[];dani=new Set((M.slobodni||[]).map(d=>String(d).slice(0,10)));
- $("login").style.display="none";$("app").style.display="block";$("ime").textContent=M.ime+" – "+(M.kategorije||[]).join(", ");
- crtCen();crtKal();pozivi();}
+const $ = id => document.getElementById(id);
+const esc = s => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
- document.querySelectorAll(".p").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));
- if(b.dataset.t==="poz")pozivi();});
+const KATS = ["Vodoinstalater", "Električar", "Grejanje / Klima", "Čišćenje", "Limar", "Lift", "Pomoć u kući", "Keramičar", "Moler", "Bašta / Dvorište", "Građevinar"];
 
-async function pozivi(){
- const r=await sb.rpc("m_pozivi",{p_pin:PIN});lista=r.data||[];
- $("poz").innerHTML=lista.length?lista.map(p=>{
-  const moj=p.majstor_id===M.id,zav=p.status==="Završeno";
-  return `<div class="k"><div class="poz"><img src="${esc(p.foto_url||"")}" alt="">
-  <div><b>${esc(p.kategorija)}</b> <span class="b">${esc(p.hitnost)}</span><br>${esc(p.opis)||"<i>bez opisa</i>"}<br>
-  📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
-  📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
-  ${zav?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
-  <input id="c${p.id}" type="number" inputmode="numeric" placeholder="Cena (din)" value="${p.cena||""}">
-  <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(p.ponuda_opis||"")}">
-  <input id="t${p.id}" type="date" value="${p.termin||""}">
-  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${moj?"Izmeni ponudu":"Pošalji ponudu"}</button>
-  ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
+$("m-kats").innerHTML = KATS.map(k => `<label style="display:inline-block;margin:4px 8px"><input type="checkbox" value="${k}"> ${k}</label>`).join("");
 
-function chip(id,i){$("c"+id).value=cen[i].cena;$("o"+id).value=cen[i].naziv}
-function izlazak(id){$("c"+id).value=IZLAZAK;$("o"+id).value="Samo izlazak majstora na teren"}
-async function ponuda(id){
- const c=parseInt($("c"+id).value);if(!c)return alert("Upiši cenu.");
- const r=await sb.rpc("m_ponuda",{p_pin:PIN,p_id:id,p_cena:c,p_opis:$("o"+id).value,p_termin:$("t"+id).value||null});
- if(r.error)return alert("Greška: "+r.error.message);pozivi();}
-async function stat(id,s){const r=await sb.rpc("m_status",{p_pin:PIN,p_id:id,p_status:s});if(r.error)alert(r.error.message);pozivi();}
+async function ucitajMajstore() {
+  const el = $("majstori-list");
+  if(!el) return;
+  el.textContent = "Učitavanje...";
+  
+  const { data, error } = await sb.from('majstori').select('*').order('id', { ascending: true });
+  if(error) {
+    el.innerHTML = `<b style="color:#c00">Greška: ${error.message}</b>`;
+    return;
+  }
+  
+  if(!data || data.length === 0) {
+    el.innerHTML = "<p>Nema unetih majstora.</p>";
+    return;
+  }
+  
+  el.innerHTML = data.map(m => `
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
+      <b>${esc(m.ime)}</b><br>
+      <small>Kategorije: ${esc(Array.isArray(m.kategorije) ? m.kategorije.join(", ") : m.kategorije)}</small><br>
+      📞 ${esc(m.telefon)} · PIN: <b>${esc(m.pin || 'N/A')}</b><br>
+      <button style="margin-top:8px;background:#ef4444;color:#fff;border:0;padding:5px 12px;border-radius:6px;cursor:pointer" onclick="obrisiMajstora(${m.id})">Obriši</button>
+    </div>
+  `).join("");
+}
 
-function crtCen(){$("redovi").innerHTML=cen.length?cen.map((x,i)=>`<div class="red"><input style="flex:2" placeholder="Usluga (npr. zamena sifona)" value="${esc(x.naziv)}" oninput="cen[${i}].naziv=this.value">
- <input type="number" placeholder="din" value="${esc(x.cena)}" oninput="cen[${i}].cena=this.value"><button class="sv" style="flex:0 0 44px" onclick="cen.splice(${i},1);crtCen()">✕</button></div>`).join(""):"<p>Cenovnik je prazan. Dodaj usluge i cene.</p>";}
-async function snimiCen(){const r=await sb.rpc("m_cenovnik",{p_pin:PIN,p_c:cen.filter(x=>x.naziv)});alert(r.error?r.error.message:"Cenovnik sačuvan ✅");pozivi();}
+async function dodajMajstora() {
+  const ime = $("m-ime").value.trim();
+  const tel = $("m-telefon").value.trim();
+  const kk = [...document.querySelectorAll("#m-kats input:checked")].map(x => x.value);
+  
+  if(!ime || !tel || !kk.length) return alert("Upiši ime, telefon i izaberi bar jednu kategoriju.");
+  
+  const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  const { error } = await sb.from('majstori').insert([{
+    ime: ime,
+    telefon: tel,
+    kategorije: kk,
+    pin: randomPin
+  }]);
+  
+  if(error) return alert("Greška pri čuvanju: " + error.message);
+  
+  alert("Majstor uspešno sačuvan! PIN: " + randomPin);
+  $("m-ime").value = "";
+  $("m-telefon").value = "";
+  document.querySelectorAll("#m-kats input").forEach(x => x.checked = false);
+  ucitajMajstore();
+}
 
-const iso=d=>d.toLocaleDateString("sv-SE");
-function crtKal(){const h=[];for(let i=0;i<28;i++){const d=new Date();d.setDate(d.getDate()+i);const k=iso(d);
- h.push(`<button class="${dani.has(k)?"on":""}" onclick="tg('${k}',this)">${d.toLocaleDateString("sr-RS",{weekday:"short"})}<br>${d.getDate()}.${d.getMonth()+1}.</button>`)}
- $("dani").innerHTML=h.join("");}
-function tg(k,b){dani.has(k)?dani.delete(k):dani.add(k);b.classList.toggle("on")}
-async function snimiKal(){const r=await sb.rpc("m_slobodni",{p_pin:PIN,p_dani:[...dani]});alert(r.error?r.error.message:"Kalendar sačuvan ✅");}
-</script></body></html>
+async function obrisiMajstora(id) {
+  if(!confirm("Da li sigurno želiš da obrišeš majstora?")) return;
+  const { error } = await sb.from('majstori').delete().eq('id', id);
+  if(error) return alert("Greška pri brisanju: " + error.message);
+  ucitajMajstore();
+}
+
+// Pokreni učitavanje odmah po otvaranju stranice
+ucitajMajstore();
+</script>
+</body>
+</html>
