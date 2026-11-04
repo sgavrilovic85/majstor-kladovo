@@ -503,6 +503,90 @@ function loadBk() {
     $('bk-err').textContent = 'Neispravan format teksta.';
   }
 }
+  // Funkcija za slanje prijave saradnika
+function posaljiPrijavuSaradnika() {
+    let ime = document.getElementById('sar-ime').value;
+    let telefon = document.getElementById('sar-tel').value;
+    let napomena = document.getElementById('sar-nap').value;
+    
+    let zanati = [];
+    document.querySelectorAll('#sar-zanati input[type="checkbox"]:checked').forEach((cb) => {
+        zanati.push(cb.value);
+    });
+
+    if (!ime || !telefon) {
+        document.getElementById('sar-err').innerText = "Molimo unesite ime i broj telefona.";
+        return;
+    }
+
+    let noviZahtev = {
+        id: Date.now(),
+        ime: ime,
+        telefon: telefon,
+        zanati: zanati,
+        napomena: napomena
+    };
+
+    let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
+    zahtevi.push(noviZahtev);
+    localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
+
+    document.getElementById('sar-err').style.color = "green";
+    document.getElementById('sar-err').innerText = "Uspešno ste poslali prijavu!";
+    
+    // Čišćenje polja forme
+    document.getElementById('sar-ime').value = '';
+    document.getElementById('sar-tel').value = '';
+    document.getElementById('sar-nap').value = '';
+}
+
+// Funkcija za prikaz i upravljanje zahtevima u Admin panelu
+function ucitajAdminPanel() {
+    let kontejner = document.getElementById('admin-sadrzaj');
+    if (!kontejner) return;
+    
+    let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
+    
+    let html = `
+        <div style="padding: 15px;">
+            <h3>📋 Pristigli zahtevi saradnika (${zahtevi.length})</h3>
+            <div id="lista-zahteva">`;
+
+    if (zahtevi.length === 0) {
+        html += `<p>Trenutno nema novih zahteva.</p>`;
+    } else {
+        zahtevi.forEach((zahtev, index) => {
+            html += `
+                <div style="background: #fff; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc;">
+                    <strong>Ime/Radnja:</strong> ${zahtev.ime} <br>
+                    <strong>Telefon:</strong> ${zahtev.telefon} <br>
+                    <strong>Zanati:</strong> ${zahtev.zanati.join(', ')} <br>
+                    <strong>Napomena:</strong> ${zahtev.napomena || 'Nema'} <br><br>
+                    <button onclick="odobriSaradnika(${index})" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">✅ Odobri</button>
+                    <button onclick="obrisiZahtev(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 8px;">❌ Obriši</button>
+                </div>`;
+        });
+    }
+
+    html += `</div></div>`;
+    kontejner.innerHTML = html;
+}
+
+function odobriSaradnika(index) {
+    let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
+    let odobreni = zahtevi.splice(index, 1)[0];
+    
+    localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
+    alert("Majstor je uspešno odobren!");
+    ucitajAdminPanel();
+}
+
+function obrisiZahtev(index) {
+    let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
+    zahtevi.splice(index, 1);
+    localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
+    ucitajAdminPanel();
+}
 </script>
 </body>
 </html>
