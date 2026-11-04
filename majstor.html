@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Baza majstora - Majstor na terenu</title>
 <link rel="icon" href="logo.jpg" type="image/jpeg">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--plava:#1b3a7a;--nar:#f261b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385}
 *{box-sizing:border-box}
@@ -43,7 +43,13 @@ button.glavno{width:100%;background:var(--plava);color:#fff;border:0;padding:12p
 <script>
 const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let sb = null;
+try {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) {
+  console.error("Greška pri inicijalizaciji:", e);
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -57,9 +63,14 @@ async function ucitajMajstore() {
   if(!el) return;
   el.textContent = "Učitavanje...";
   
+  if(!sb) {
+    el.innerHTML = `<b style="color:#c00">Greška: Supabase klijent nije inicijalizovan.</b>`;
+    return;
+  }
+
   const { data, error } = await sb.from('majstori').select('*').order('id', { ascending: true });
   if(error) {
-    el.innerHTML = `<b style="color:#c00">Greška: ${error.message}</b>`;
+    el.innerHTML = `<b style="color:#c00">Greška baze: ${error.message}</b>`;
     return;
   }
   
