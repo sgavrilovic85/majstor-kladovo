@@ -601,6 +601,7 @@ function odobriSaradnika(index) {
     let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
     if (zahtevi.length <= index) return;
     
+    // Uklanjamo zahtev iz liste čekanja
     let odobreni = zahtevi.splice(index, 1)[0];
     localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
     
@@ -629,6 +630,7 @@ function odobriSaradnika(index) {
 
     alert("Majstor je uspešno odobren i prebačen u aktivne majstore!");
     
+    // Osvežavamo prikaz panela
     ucitajAdminPanel();
     if (typeof initMajstoriApp === 'function') initMajstoriApp();
 }
@@ -638,6 +640,7 @@ function obrisiZahtev(index) {
     zahtevi.splice(index, 1);
     localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
     ucitajAdminPanel();
+}
 }
 </script>
 </body>
