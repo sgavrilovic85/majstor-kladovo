@@ -11,6 +11,7 @@
     navigator.serviceWorker.register('sw.js');
   }
 </script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9...">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -151,14 +152,15 @@ const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrCoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
 const IZLAZAK = 3000;
-let ADMIN_P = "";
+let ADMIN_P = "";   // admin PIN se proverava u bazi
 
-const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kuci"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
+const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 
+// Generisanje zanata u formi za prijavu saradnika
 $("sar-zanati").innerHTML = KATS.map(z => `<label class="zanat-cb"><input type="checkbox" value="${z[1]}"> ${z[1]}</label>`).join('');
 
 const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
@@ -198,11 +200,11 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=async()=>{
+let adminAutorizovan = false;
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin"){
   if(!ADMIN_P){const pin=prompt("Unesite Admin PIN:");if(!pin)return;ADMIN_P=pin.trim();}
-  await proveriIskljuciLokalneMajstore();
   initMajstoriApp();
  }
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
@@ -298,9 +300,17 @@ async function crtajStatus(){
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
-// ===== SINHRONIZOVANA BAZA MAJSTORA I PRIJAVA =====
-let DM = [], Prijave = [];
+// ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
+let DM, Prijave;
+try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
+try { Prijave = JSON.parse(localStorage.getItem('prijave_kladovo')); } catch(e) {}
+DM = DM || { majstori: [] };
+Prijave = Prijave || [];
+
 let VM = { p: 'home', filter: '' }, armedM = '';
+const saveM = () => { try { localStorage.setItem('majstori_kladovo', JSON.stringify(DM)); } catch(e) {} };
+const saveP = () => { try { localStorage.setItem('prijave_kladovo', JSON.stringify(Prijave)); } catch(e) {} };
+const uidM = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
 async function posaljiPrijavuSaradnika() {
  const ime = $('sar-ime').value.trim();
@@ -322,76 +332,72 @@ async function posaljiPrijavuSaradnika() {
  $('sar-err').textContent = '';
 }
 
-async function proveriIskljuciLokalneMajstore() {
+const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
+async function ucitajPrijave() {
+ if(!sb) { renderM(); return; }
+ const [a, b] = await Promise.all([sb.rpc('s_lista', { p_admin: ADMIN_P }), sb.rpc('a_majstori', { p_admin: ADMIN_P })]);
+ const err = a.error || b.error;
+ if(err && /PIN/.test(err.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
+ if(err) alert('Greška pri učitavanju: ' + err.message);
+ Prijave = a.data || [];
+ DM = { majstori: (b.data || []).map(mapM) };
+ await prebaciStare();
+ renderM();
+}
+// jednokratno: majstori sačuvani samo na ovom uređaju prelaze u bazu
+async function prebaciStare() {
  try {
-  const lokalni = JSON.parse(localStorage.getItem('majstori_kladovo'));
-  if (lokalni && lokalni.majstori && lokalni.majstori.length > 0) {
-   if (confirm("Na ovom uređaju ima sačuvanih majstora. Da li želite da ih prebacite u zajedničku Supabase bazu?")) {
-    for (let m of lokalni.majstori) {
-     await sb.rpc('a_dodaj', {
-      p_admin: ADMIN_P,
-      p_ime: m.ime,
-      p_telefon: m.telefon,
-      p_kat: m.usluge,
-      p_prioritet: 2,
-      p_napomena: m.napomena || ''
-     });
-    }
-    localStorage.removeItem('majstori_kladovo');
-    alert("Majstori su uspešno prebačeni u centralnu bazu!");
-   }
-  }
+  if(localStorage.getItem('majstori_migrirani')) return;
+  const stari = (JSON.parse(localStorage.getItem('majstori_kladovo')) || {}).majstori || [];
+  const cif = t => String(t || '').replace(/\D/g, '');
+  const novi = stari.filter(x => !DM.majstori.some(m => cif(m.telefon) === cif(x.telefon)));
+  if(!novi.length) { localStorage.setItem('majstori_migrirani', '1'); return; }
+  const ok = confirm('Na ovom uređaju ima ' + novi.length + ' majstora koji nisu u bazi:\n' + novi.map(x => x.ime).join(', ') + '\n\nPrebaciti ih u bazu?');
+  localStorage.setItem('majstori_migrirani', '1');
+  if(!ok) return;
+  for(const x of novi) await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: x.ime, p_telefon: x.telefon, p_kat: x.usluge || [], p_prioritet: 2, p_napomena: x.napomena || '' });
+  const b = await sb.rpc('a_majstori', { p_admin: ADMIN_P });
+  if(!b.error) DM = { majstori: (b.data || []).map(mapM) };
  } catch(e) {}
 }
 
-async function ucitajMajstoreIPrijave() {
- if(!sb) return;
- const rM = await sb.rpc('a_majstori', { p_admin: ADMIN_P });
- if(rM.error) {
-  if(/PIN/.test(rM.error.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
-  alert('Greška pri učitavanju majstora: ' + rM.error.message); DM = [];
- } else { DM = rM.data || []; }
-
- const rP = await sb.rpc('s_lista', { p_admin: ADMIN_P });
- if(!rP.error) { Prijave = rP.data || []; }
- 
- renderM();
-}
-
 async function odobriPrijavu(id) {
+ const p = Prijave.find(x => x.id == id); if(!p) return;
  const r = await sb.rpc('s_odobri', { p_admin: ADMIN_P, p_id: Number(id), p_prioritet: 2 });
  if(r.error) return alert('Greška: ' + r.error.message);
- alert('Majstor odobren ✅\nNjegov PIN za panel majstora: ' + r.data);
- ucitajMajstoreIPrijave();
+ alert('Majstor odobren ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
+ ucitajPrijave();
 }
 
 async function odbijPrijavu(id) {
  if(!confirm('Odbiti i obrisati prijavu?')) return;
  const r = await sb.rpc('s_obrisi', { p_admin: ADMIN_P, p_id: Number(id) });
  if(r.error) alert('Greška: ' + r.error.message);
- ucitajMajstoreIPrijave();
+ ucitajPrijave();
 }
+
+function initMajstoriApp() { ucitajPrijave(); }
+const goM = (p, id) => { VM = { p, id, filter: VM.filter }; armedM = ''; renderM(); };
 
 async function delMajstorM(id) {
   if (armedM != id) { armedM = id; renderM(); return; }
   const r = await sb.rpc('a_obrisi', { p_admin: ADMIN_P, p_id: Number(id) });
-  if(r.error) { alert('Greška: ' + r.error.message); return; }
-  goM('home');
+  if(r.error) alert('Greška: ' + r.error.message);
+  armedM = '';
+  VM = { p: 'home', filter: VM.filter };
+  ucitajPrijave();
 }
-
-function initMajstoriApp() { ucitajMajstoreIPrijave(); }
-const goM = (p, id) => { VM = { p, id, filter: VM.filter }; armedM = ''; renderM(); };
 
 function renderM() {
   const container = $('admin-sadrzaj');
   if(!container) return;
   
   if(VM.p === 'home') {
-    const lista = VM.filter ? DM.filter(m => m.kategorije && m.kategorije.includes(VM.filter)) : DM;
+    const lista = VM.filter ? DM.majstori.filter(m => m.usluge && m.usluge.includes(VM.filter)) : DM.majstori;
     container.innerHTML = `
       <div class="sek" style="text-align:center; background:var(--plava); color:#fff; border-radius:14px; margin-bottom:12px;">
         <h2 style="margin:0; font-size:22px; color:#fff;">📋 Admin Panel</h2>
-        <div style="font-size:14px; opacity:0.9;">Sinhronizovana baza majstora</div>
+        <div style="font-size:14px; opacity:0.9;">Baza majstora i odobravanje prijava</div>
       </div>
 
       ${Prijave.length > 0 ? `
@@ -415,7 +421,7 @@ function renderM() {
       <button class="b-m" onclick="goM('majstorNew')">+ Dodaj novog majstora ručno</button>
       <label for="flt" style="margin-top:12px;">Filtriraj po struci / zanatu:</label>
       <select id="flt" onchange="VM.filter = this.value; renderM();">
-        <option value="">— Svi majstori (${DM.length}) —</option>
+        <option value="">— Svi majstori (${DM.majstori.length}) —</option>
         ${KATS.map(z => `<option value="${z[1]}" ${VM.filter==z[1]?'selected':''}>${z[1]}</option>`).join('')}
       </select>
       <h3 style="margin-top:20px;">Spisak aktivnih majstora (${lista.length})</h3>
@@ -430,10 +436,11 @@ function renderM() {
             <div>➡️</div>
           </div>
           <div class="tags">
-            ${(m.kategorije||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+            ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
           </div>
         </div>
       `).join('')}
+      <button class="b-m ghost" style="margin-top:24px;" onclick="goM('bk')">💾 Rezervna kopija (Uvoz/Izvoz)</button>
     `;
   } else if(VM.p === 'majstorNew') {
     container.innerHTML = `
@@ -457,7 +464,7 @@ function renderM() {
       <button class="b-m" style="margin-top:16px;" onclick="saveNewMajstor()">Sačuvaj majstora</button>
     `;
   } else if(VM.p === 'majstorV') {
-    const m = DM.find(x => x.id == VM.id);
+    const m = DM.majstori.find(x => x.id == VM.id);
     if(!m) { goM('home'); return; }
     const telClean = m.telefon.replace(/\D/g, '');
     const waNum = telClean.startsWith('0') ? '381' + telClean.slice(1) : telClean;
@@ -467,11 +474,11 @@ function renderM() {
       <div class="card-m">
         <div style="color:var(--sv); font-size:14px;">Telefon</div>
         <div style="font-size:20px; font-weight:700; margin-bottom:8px;">${esc(m.telefon)}</div>
-        <div style="color:var(--sv); font-size:14px;">PIN za panel majstora</div>
-        <div style="font-size:18px; font-weight:700; color:var(--nar); margin-bottom:8px;">${esc(m.pin)}</div>
+        <div style="color:var(--sv); font-size:14px;">PIN za panel majstora (majstor.html)</div>
+        <div style="font-size:20px; font-weight:700; margin-bottom:8px;">${esc(m.pin)}</div>
         <div style="color:var(--sv); font-size:14px;">Usluge / Zanati</div>
         <div class="tags" style="margin-bottom:12px;">
-          ${(m.kategorije||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+          ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
         </div>
         ${m.napomena ? `<div style="color:var(--sv); font-size:14px;">Napomena</div><div>${esc(m.napomena)}</div>` : ''}
       </div>
@@ -481,6 +488,16 @@ function renderM() {
         <button class="b-m danger" onclick="delMajstorM('${m.id}')">${armedM == m.id ? 'Pritisnite opet za brisanje' : '🗑️ Obriši majstora'}</button>
       </div>
     `;
+  } else if(VM.p === 'bk') {
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">Rezervna kopija</h3>
+      <p style="color:var(--sv); font-size:15px;">Podaci baze majstora. Ovde možete kopirati ili učitati podatke.</p>
+      <textarea id="bk-tekst" style="min-height:140px;">${esc(JSON.stringify(DM))}</textarea>
+      <div id="bk-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+      <button class="b-m" style="margin-top:12px;" onclick="copyBk()">📋 Kopiraj podatke</button>
+      <button class="b-m ghost" onclick="loadBk()">Učitaj podatke iz teksta</button>
+    `;
   }
 }
 
@@ -489,22 +506,38 @@ async function saveNewMajstor() {
   const tel = $('mn-tel').value.trim();
   const nap = $('mn-nap').value.trim();
   const usluge = [...document.querySelectorAll('.grid-zanati input[type="checkbox"]:checked')].map(x => x.value);
-  
+
   if(!ime || !tel) { $('mn-err').textContent = 'Unesite ime i telefon.'; return; }
   if(usluge.length === 0) { $('mn-err').textContent = 'Izaberite bar jednu uslugu.'; return; }
-  
-  const r = await sb.rpc('a_dodaj', {
-    p_admin: ADMIN_P,
-    p_ime: ime,
-    p_telefon: tel,
-    p_kat: usluge,
-    p_prioritet: 2,
-    p_napomena: nap
-  });
-  
+
+  const r = await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: ime, p_telefon: tel, p_kat: usluge, p_prioritet: 2, p_napomena: nap });
   if(r.error) { $('mn-err').textContent = 'Greška: ' + r.error.message; return; }
-  alert('Majstor uspešno dodat! PIN: ' + r.data);
-  goM('home');
+  alert('Majstor sačuvan ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
+  VM = { p: 'home', filter: VM.filter };
+  ucitajPrijave();
+}
+
+function copyBk() {
+  const t = $('bk-tekst');
+  t.select();
+  try { document.execCommand('copy'); $('bk-err').style.color='var(--zel)'; $('bk-err').textContent = 'Podaci uspešno kopirani!'; }
+  catch(e) { $('bk-err').textContent = 'Kopiranje nije uspelo.'; }
+}
+
+async function loadBk() {
+  try {
+    const x = JSON.parse($('bk-tekst').value);
+    if(!x.majstori) throw 0;
+    const cif = t => String(t || '').replace(/\D/g, '');
+    for(const m of x.majstori) {
+      if(DM.majstori.some(d => cif(d.telefon) === cif(m.telefon))) continue;
+      await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: m.ime, p_telefon: m.telefon, p_kat: m.usluge || [], p_prioritet: 2, p_napomena: m.napomena || '' });
+    }
+    VM = { p: 'home', filter: '' };
+    ucitajPrijave();
+  } catch(e) {
+    $('bk-err').textContent = 'Neispravan format teksta.';
+  }
 }
 </script>
 </body>
