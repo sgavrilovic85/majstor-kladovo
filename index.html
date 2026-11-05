@@ -599,11 +599,38 @@ function ucitajAdminPanel() {
 
 function odobriSaradnika(index) {
     let zahtevi = JSON.parse(localStorage.getItem('pending_requests')) || [];
-    let odobreni = zahtevi.splice(index, 1)[0];
+    if (zahtevi.length <= index) return;
     
+    let odobreni = zahtevi.splice(index, 1)[0];
     localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
-    alert("Majstor je uspešno odobren!");
+    
+    // Upisujemo odobrenog majstora u glavnu listu aktivnih majstora
+    if (typeof DM !== 'undefined' && DM.majstori) {
+        DM.majstori.push({
+            id: 'm_' + Date.now(),
+            ime: odobreni.ime,
+            telefon: odobreni.telefon,
+            usluge: odobreni.zanati,
+            napomena: odobreni.napomena || '',
+            datum: new Date().toISOString()
+        });
+        if (typeof saveM === 'function') saveM();
+    } else {
+        let aktivni = JSON.parse(localStorage.getItem('majstori')) || [];
+        aktivni.push({
+            id: 'm_' + Date.now(),
+            ime: odobreni.ime,
+            telefon: odobreni.telefon,
+            usluge: odobreni.zanati,
+            napomena: odobreni.napomena || ''
+        });
+        localStorage.setItem('majstori', JSON.stringify(aktivni));
+    }
+
+    alert("Majstor je uspešno odobren i prebačen u aktivne majstore!");
+    
     ucitajAdminPanel();
+    if (typeof initMajstoriApp === 'function') initMajstoriApp();
 }
 
 function obrisiZahtev(index) {
