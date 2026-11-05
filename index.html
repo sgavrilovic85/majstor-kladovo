@@ -506,17 +506,27 @@ function loadBk() {
 }
   // Funkcija za slanje prijave saradnika
 function posaljiPrijavuSaradnika() {
-    let ime = document.getElementById('sar-ime').value;
-    let telefon = document.getElementById('sar-tel').value;
-    let napomena = document.getElementById('sar-nap').value;
-    
+    let imeInput = document.getElementById('sar-ime');
+    let telInput = document.getElementById('sar-tel');
+    let napInput = document.getElementById('sar-nap');
+    let errDiv = document.getElementById('sar-err');
+
+    let ime = imeInput ? imeInput.value.trim() : '';
+    let telefon = telInput ? telInput.value.trim() : '';
+    let napomena = napInput ? napInput.value.trim() : '';
+
     let zanati = [];
     document.querySelectorAll('#sar-zanati input[type="checkbox"]:checked').forEach((cb) => {
         zanati.push(cb.value);
     });
 
     if (!ime || !telefon) {
-        document.getElementById('sar-err').innerText = "Molimo unesite ime i broj telefona.";
+        if (errDiv) {
+            errDiv.style.color = "#dc3545";
+            errDiv.innerText = "Molimo unesite ime i broj telefona.";
+        } else {
+            alert("Molimo unesite ime i broj telefona.");
+        }
         return;
     }
 
@@ -532,15 +542,21 @@ function posaljiPrijavuSaradnika() {
     zahtevi.push(noviZahtev);
     localStorage.setItem('pending_requests', JSON.stringify(zahtevi));
 
-    document.getElementById('sar-err').style.color = "green";
-    document.getElementById('sar-err').innerText = "Uspešno ste poslali prijavu!";
+    if (errDiv) {
+        errDiv.style.color = "green";
+        errDiv.innerText = "Uspešno ste poslali prijavu!";
+    } else {
+        alert("Uspešno ste poslali prijavu!");
+    }
     
     // Čišćenje polja forme
-    document.getElementById('sar-ime').value = '';
-    document.getElementById('sar-tel').value = '';
-    document.getElementById('sar-nap').value = '';
+    if (imeInput) imeInput.value = '';
+    if (telInput) telInput.value = '';
+    if (napInput) napInput.value = '';
+    document.querySelectorAll('#sar-zanati input[type="checkbox"]').forEach((cb) => {
+        cb.checked = false;
+    });
 }
-
 // Funkcija za prikaz i upravljanje zahtevima u Admin panelu
 function ucitajAdminPanel() {
     let kontejner = document.getElementById('admin-sadrzaj');
