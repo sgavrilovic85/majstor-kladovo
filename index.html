@@ -352,14 +352,22 @@ async function posaljiPrijavuSaradnika() {
 const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
 async function ucitajPrijave() {
  if(!sb) { renderM(); return; }
- const [a, b] = await Promise.all([sb.rpc('s_lista', { p_admin: ADMIN_P }), sb.rpc('a_majstori', { p_admin: ADMIN_P })]);
- const err = a.error || b.error;
- if(err && /PIN/.test(err.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
- if(err) alert('Greška pri učitavanju: ' + err.message);
- Prijave = a.data || [];
- DM = { majstori: (b.data || []).map(mapM) };
- await prebaciStare();
- renderM();
+ try {
+   const [resMajstori, resPrijave, resPozivi] = await Promise.all([
+     sb.from('majstori').select('*'),
+     sb.from('saradnici').select('*'),
+     sb.from('pozivi').select('*').order('created_at', { ascending: false })
+   ]);
+   
+   DM = { majstori: (resMajstori.data || []).map(m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || m.usluge || [], napomena: m.napomena || '', pin: m.pin })) };
+   Prijave = resPrijave.data || [];
+   window.PoziviList = resPozivi.data || [];
+   
+   renderM();
+ } catch(e) {
+   console.log("Greška pri učitavanju:", e);
+   renderM();
+ }
 }
 
 async function prebaciStare() {
