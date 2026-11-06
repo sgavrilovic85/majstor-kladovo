@@ -54,7 +54,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 .st img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
 .st b{display:block}
 .bedz{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
-.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
+.Dodeljeno{background:#e0a100}.Ponuda{background:#2563eb}.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
 .nap{background:#fff7e6;border:1px solid #f3d49a;border-radius:12px;padding:11px;font-size:14px;margin-bottom:12px}
 .pr{display:none}.pr.on{display:block}
 #ok{display:none;position:fixed;inset:0;background:#000a;z-index:50;align-items:center;justify-content:center;padding:20px}
@@ -140,7 +140,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 7 · podaci u zajedničkoj bazi</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 9 · podaci u bazi i zvučna obaveštenja</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
@@ -206,7 +206,9 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin"){
   if(!ADMIN_P){const pin=prompt("Unesite Admin PIN:");if(!pin)return;ADMIN_P=pin.trim();}
+  try{ audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); }catch(e){}
   initMajstoriApp();
+  pokreniProveru();
  }
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
@@ -222,41 +224,20 @@ $("slanje").onclick=async()=>{
  const d={kategorija:kat,hitnost:hit,opis:$("opis").value.trim(),adresa:$("adresa").value.trim(),telefon:$("tel").value.trim(),lat,lng};
  $("slanje").disabled=true;$("slanje").textContent="Šaljem...";
  
- let fotoUrl = "";
  try{
-  if(sb){
-   if(foto){
-    const ime=Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
-    const u=await sb.storage.from("photos").upload(ime,foto);
-    if(!u.error){ fotoUrl = sb.storage.from("photos").getPublicUrl(ime).data.publicUrl; d.foto_url = fotoUrl; }
-   }
-   const r=await sb.from("pozivi").insert(d);if(r.error)throw r.error;
-   $("ok").style.display="flex";
+  if(!sb) throw new Error("baza nije dostupna");
+  if(foto){
+   const ime=Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
+   const u=await sb.storage.from("photos").upload(ime,foto);
+   if(!u.error) d.foto_url = sb.storage.from("photos").getPublicUrl(ime).data.publicUrl;
   }
- }catch(e){}
-
- const telMajstora = TELEFON.replace(/\D/g, '');
- const mapLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : 'Nije uneta GPS lokacija';
- 
- const poruka = `🛠️ *NOVI ZAHTEV ZA MAJSTORA*
-----------------------------------
-🔧 *Usluga:* ${d.kategorija}
-⚡ *Hitnost:* ${d.hitnost}
-📍 *Adresa:* ${d.adresa || 'Vidi GPS lokaciju'}
-🗺️ *Tačna GPS Lokacija problema:* ${mapLink}
-📝 *Opis kvara:* ${d.opis || 'Nema opisa'}
-📞 *Korisnik tel:* ${d.telefon}
-${fotoUrl ? `📷 *Slika kvara:* ${fotoUrl}\n` : ''}
-----------------------------------
-📋 *ODGOVOR MAJSTORA (popuniti i poslati nazad):*
-✅ *PRIHVATAM POSAO:* [ Da / Ne ]
-📅 *SLOBODAN TERMIN:* [ Datum i Vreme ]
-💰 *CENA POPRAVKE:* [ Unesite cenu u DIN ]`;
-
- const waUrl = `https://wa.me/${telMajstora}?text=${encodeURIComponent(poruka)}`;
- window.open(waUrl, '_blank');
-
- reset();
+  const r=await sb.from("pozivi").insert(d);
+  if(r.error) throw r.error;
+  $("ok").style.display="flex";
+  reset();
+ }catch(e){
+  alert("Slanje nije uspelo: "+(e.message||e)+"\nPozovite nas: 063 84 34 412");
+ }
  $("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";
 };
 
@@ -302,7 +283,7 @@ async function crtajStatus(){
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
 // ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
-let DM, Prijave;
+let DM, Prijave, PoziviList = [], znaniPozivi = null, lastSig = '', pollId = null;
 try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
 try { Prijave = JSON.parse(localStorage.getItem('prijave_kladovo')); } catch(e) {}
 DM = DM || { majstori: [] };
@@ -334,16 +315,52 @@ async function posaljiPrijavuSaradnika() {
 }
 
 const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
-async function ucitajPrijave() {
+let audioCtx = null;
+function playNotificationSound() {
+  try {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {}
+}
+async function ucitajPrijave(tiho) {
  if(!sb) { renderM(); return; }
- const [a, b] = await Promise.all([sb.rpc('s_lista', { p_admin: ADMIN_P }), sb.rpc('a_majstori', { p_admin: ADMIN_P })]);
- const err = a.error || b.error;
+ const [a, b, c] = await Promise.all([
+  sb.rpc('s_lista', { p_admin: ADMIN_P }),
+  sb.rpc('a_majstori', { p_admin: ADMIN_P }),
+  sb.rpc('a_pozivi', { p_admin: ADMIN_P })
+ ]);
+ const err = a.error || b.error || c.error;
  if(err && /PIN/.test(err.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
- if(err) alert('Greška pri učitavanju: ' + err.message);
+ if(err && !tiho) alert('Greška pri učitavanju: ' + err.message);
  Prijave = a.data || [];
  DM = { majstori: (b.data || []).map(mapM) };
- await prebaciStare();
- renderM();
+ PoziviList = c.data || [];
+ if(znaniPozivi && PoziviList.some(x => !znaniPozivi.has(x.id))) playNotificationSound();
+ znaniPozivi = new Set(PoziviList.map(x => x.id));
+ if(!tiho) await prebaciStare();
+ const sig = JSON.stringify([Prijave, DM, PoziviList]);
+ if(!tiho || sig !== lastSig) { lastSig = sig; renderM(); }
+}
+// provera novih poziva na svakih 15 sekundi dok je admin tab otvoren
+function pokreniProveru() {
+ if(pollId) return;
+ pollId = setInterval(() => {
+  const el = document.getElementById('admin');
+  if(ADMIN_P && el && el.classList.contains('on') && VM.p === 'home') ucitajPrijave(true);
+ }, 15000);
+}
+async function assignMajstorToCall(pozivId, majstorId) {
+ if(!majstorId) return;
+ const r = await sb.rpc('a_dodeli', { p_admin: ADMIN_P, p_id: Number(pozivId), p_majstor: Number(majstorId) });
+ if(r.error) return alert('Greška: ' + r.error.message);
+ alert('Zahtev prosleđen majstoru ✅');
+ ucitajPrijave();
 }
 // jednokratno: majstori sačuvani samo na ovom uređaju prelaze u bazu
 async function prebaciStare() {
@@ -398,7 +415,32 @@ function renderM() {
     container.innerHTML = `
       <div class="sek" style="text-align:center; background:var(--plava); color:#fff; border-radius:14px; margin-bottom:12px;">
         <h2 style="margin:0; font-size:22px; color:#fff;">📋 Admin Panel</h2>
-        <div style="font-size:14px; opacity:0.9;">Baza majstora i odobravanje prijava</div>
+        <div style="font-size:14px; opacity:0.9;">Baza majstora, zahtevi i odobravanje prijava</div>
+      </div>
+
+      <div class="sek" style="border:2px solid var(--plava); background:#f0f4ff;">
+        <h3 style="color:var(--plava); margin:0 0 10px;">🔔 Zahtevi klijenata (novih: ${PoziviList.filter(x => x.status === 'Novo' || x.status === 'na_čekanju').length})</h3>
+        ${PoziviList.length === 0 ? '<p style="font-size:14px; color:#666;">Nema zahteva.</p>' : ''}
+        ${PoziviList.slice(0, 15).map(z => `
+          <div class="card-m" style="border-color:#bfdbfe;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <b style="font-size:16px; color:var(--plava);">${esc(z.kategorija)} · ${esc(z.hitnost)}</b>
+              <span class="bedz ${esc((z.status || 'Novo').replace(/ /g, '-'))}">${esc(z.status)}</span>
+            </div>
+            ${z.foto_url ? `<a href="${esc(z.foto_url)}" target="_blank"><img src="${esc(z.foto_url)}" alt="" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-top:8px;"></a>` : ''}
+            <div style="font-size:14px; margin-top:6px;"><b>Opis:</b> ${esc(z.opis || 'Nema opisa')}</div>
+            <div style="font-size:14px;"><b>Tel:</b> <a href="tel:${esc(z.telefon)}">${esc(z.telefon)}</a></div>
+            <div style="font-size:14px;"><b>Adresa:</b> ${esc(z.adresa || 'GPS lokacija')} ${z.lat ? `<a target="_blank" href="https://maps.google.com/?q=${z.lat},${z.lng}">📍 mapa</a>` : ''}</div>
+            ${z.cena ? `<div style="font-size:14px;"><b>Ponuda:</b> ${esc(z.cena)} din</div>` : ''}
+            <div style="margin-top:8px;">
+              <label style="font-size:13px; font-weight:600;">Dodeli majstoru:</label>
+              <select style="padding:6px; font-size:14px; width:100%;" onchange="assignMajstorToCall('${z.id}', this.value)">
+                <option value="">-- Izaberi majstora --</option>
+                ${DM.majstori.map(m => `<option value="${m.id}" ${z.majstor_id == m.id ? 'selected' : ''}>${esc(m.ime)} (${esc(m.telefon)})</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        `).join('')}
       </div>
 
       ${Prijave.length > 0 ? `
