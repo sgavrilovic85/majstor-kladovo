@@ -139,7 +139,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 7 · podaci u zajedničkoj bazi</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 7.1 · zvučni alarm i 6-cifreni PIN</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
@@ -152,7 +152,7 @@ const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
 const IZLAZAK = 3000;
-let ADMIN_P = "929566";   // Vaš novi 6-cifreni PIN
+let ADMIN_P = "929566";   // Postavljen vaš 6-cifreni PIN
 
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
@@ -160,6 +160,7 @@ const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 
+// Zvučni alarm za nove zahteve
 let audioCtx = null;
 function playNotificationSound() {
   try {
@@ -217,6 +218,7 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
+let adminAutorizovan = false;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin"){
@@ -230,6 +232,17 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  $("dno").style.display=t==="prijava"?"flex":"none";
  if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();
 });
+
+// Realtime slušanje novih zahteva i zvučni alarm
+function listenRealtime() {
+  if(!sb) return;
+  sb.channel('admin-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pozivi' }, payload => {
+      playNotificationSound();
+      ucitajPrijave();
+    })
+    .subscribe();
+}
 
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
@@ -328,6 +341,7 @@ Prijave = Prijave || [];
 let VM = { p: 'home', filter: '' }, armedM = '';
 const saveM = () => { try { localStorage.setItem('majstori_kladovo', JSON.stringify(DM)); } catch(e) {} };
 const saveP = () => { try { localStorage.setItem('prijave_kladovo', JSON.stringify(Prijave)); } catch(e) {} };
+const uidM = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
 async function posaljiPrijavuSaradnika() {
  const ime = $('sar-ime').value.trim();
@@ -352,36 +366,38 @@ async function posaljiPrijavuSaradnika() {
 const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
 async function ucitajPrijave() {
  if(!sb) { renderM(); return; }
+ const [a, b] = await Promise.all([sb.rpc('s_lista', { p_admin: ADMIN_P }), sb.rpc('a_majstori', { p_admin: ADMIN_P })]);
+ const err = a.error || b.error;
+ if(err && /PIN/.test(err.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
+ if(err) alert('Greška pri učitavanju: ' + err.message);
+ Prijave = a.data || [];
+ DM = { majstori: (b.data || []).map(mapM) };
+ await prebaciStare();
+ renderM();
+}
+
+async function prebaciStare() {
  try {
-   const [resMajstori, resPrijave, resPozivi] = await Promise.all([
-     sb.from('majstori').select('*'),
-     sb.from('saradnici').select('*'),
-     sb.from('pozivi').select('*').order('created_at', { ascending: false })
-   ]);
-   
-   DM = { majstori: (resMajstori.data || []).map(m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || m.usluge || [], napomena: m.napomena || '', pin: m.pin })) };
-   Prijave = resPrijave.data || [];
-   window.PoziviList = resPozivi.data || [];
-   
-   renderM();
- } catch(e) {
-   console.log("Greška pri učitavanju:", e);
-   renderM();
- }
+  if(localStorage.getItem('majstori_migrirani')) return;
+  const stari = (JSON.parse(localStorage.getItem('majstori_kladovo')) || {}).majstori || [];
+  const cif = t => String(t || '').replace(/\D/g, '');
+  const novi = stari.filter(x => !DM.majstori.some(m => cif(m.telefon) === cif(x.telefon)));
+  if(!novi.length) { localStorage.setItem('majstori_migrirani', '1'); return; }
+  const ok = confirm('Na ovom uređaju ima ' + novi.length + ' majstora koji nisu u bazi:\n' + novi.map(x => x.ime).join(', ') + '\n\nPrebaciti ih u bazu?');
+  localStorage.setItem('majstori_migrirani', '1');
+  if(!ok) return;
+  for(const x of novi) await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: x.ime, p_telefon: x.telefon, p_kat: x.usluge || [], p_prioritet: 2, p_napomena: x.napomena || '' });
+  const b = await sb.rpc('a_majstori', { p_admin: ADMIN_P });
+  if(!b.error) DM = { majstori: (b.data || []).map(mapM) };
+ } catch(e) {}
 }
 
 async function odobriPrijavu(id) {
- const p = Prijave.find(x => x.id == id);
- if(!p) return;
- try {
-   const pinNovi = Math.floor(1000 + Math.random() * 9000);
-   await sb.from('majstori').insert([{ ime: p.ime, telefon: p.telefon, kategorije: p.usluge, napomena: p.napomena, pin: String(pinNovi), aktivan: true }]);
-   await sb.from('saradnici').delete().eq('id', id);
-   alert('Majstor odobren i prebačen u bazu ✅\nPIN za majstora: ' + pinNovi);
-   ucitajPrijave();
- } catch(e) {
-   alert('Greška pri odobravanju: ' + e.message);
- }
+ const p = Prijave.find(x => x.id == id); if(!p) return;
+ const r = await sb.rpc('s_odobri', { p_admin: ADMIN_P, p_id: Number(id), p_prioritet: 2 });
+ if(r.error) return alert('Greška: ' + r.error.message);
+ alert('Majstor odobren ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
+ ucitajPrijave();
 }
 
 async function odbijPrijavu(id) {
@@ -401,16 +417,6 @@ async function delMajstorM(id) {
   armedM = '';
   VM = { p: 'home', filter: VM.filter };
   ucitajPrijave();
-}
-
-function listenRealtime() {
-  if(!sb) return;
-  sb.channel('db-admin-changes')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pozivi' }, payload => {
-      playNotificationSound();
-      ucitajPrijave();
-    })
-    .subscribe();
 }
 
 function renderM() {
@@ -537,7 +543,7 @@ async function saveNewMajstor() {
 
   const r = await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: ime, p_telefon: tel, p_kat: usluge, p_prioritet: 2, p_napomena: nap });
   if(r.error) { $('mn-err').textContent = 'Greška: ' + r.error.message; return; }
-  alert('Majstor sačuvan ✅\nNjegov PIN za panel majstora: ' + r.data);
+  alert('Majstor sačuvan ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
   VM = { p: 'home', filter: VM.filter };
   ucitajPrijave();
 }
@@ -545,7 +551,7 @@ async function saveNewMajstor() {
 function copyBk() {
   const t = $('bk-tekst');
   t.select();
-  try { document.execCommand('copy'); $('bk-err').style.color='var(--zel)'; $('bk-err').textContent = 'Podaci uspešno kopirani!'; }
+  try { document.execCommand('copy'); $('bk-err').style.color='var(--zel)'; $('bk-err'].textContent = 'Podaci uspešno kopirani!'; }
   catch(e) { $('bk-err').textContent = 'Kopiranje nije uspelo.'; }
 }
 
