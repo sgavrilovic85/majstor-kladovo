@@ -324,7 +324,7 @@ async function posaljiPrijavuSaradnika() {
 
  $('sar-err').textContent = 'Šaljem...';
  const r = await sb.from('saradnici').insert({ ime, telefon: tel, usluge, napomena: nap });
- if(r.error) { $('sar-err').textContent = 'Slanje nije uspelo. Pozovite nas: 063 84 34 412'; return; }
+ if(r.error) { $('sar-err').textContent = 'Slanje nije uspelo (' + r.error.message + '). Pozovite nas: 063 84 34 412'; return; }
 
  alert('✅ Vaša prijava je uspešno poslata! Administrator će vas kontaktirati nakon provere.');
  $('sar-ime').value = ''; $('sar-tel').value = ''; $('sar-nap').value = '';
