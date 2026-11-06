@@ -370,25 +370,18 @@ async function ucitajPrijave() {
  }
 }
 
-async function prebaciStare() {
- try {
-  if(localStorage.getItem('majstori_migrirani')) return;
-  const stari = (JSON.parse(localStorage.getItem('majstori_kladovo')) || {}).majstori || [];
-  const cif = t => String(t || '').replace(/\D/g, '');
-  const novi = stari.filter(x => !DM.majstori.some(m => cif(m.telefon) === cif(x.telefon)));
-  if(!novi.length) { localStorage.setItem('majstori_migrirani', '1'); return; }
-  localStorage.setItem('majstori_migrirani', '1');
-  for(const x of novi) await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: x.ime, p_telefon: x.telefon, p_kat: x.usluge || [], p_prioritet: 2, p_napomena: x.napomena || '' });
-  const b = await sb.rpc('a_majstori', { p_admin: ADMIN_P });
-  if(!b.error) DM = { majstori: (b.data || []).map(mapM) };
- } catch(e) {}
-}
-
 async function odobriPrijavu(id) {
- const r = await sb.rpc('s_odobri', { p_admin: ADMIN_P, p_id: Number(id), p_prioritet: 2 });
- if(r.error) return alert('Greška: ' + r.error.message);
- alert('Majstor odobren ✅\nNjegov PIN za panel majstora: ' + r.data);
- ucitajPrijave();
+ const p = Prijave.find(x => x.id == id);
+ if(!p) return;
+ try {
+   const pinNovi = Math.floor(1000 + Math.random() * 9000);
+   await sb.from('majstori').insert([{ ime: p.ime, telefon: p.telefon, kategorije: p.usluge, napomena: p.napomena, pin: String(pinNovi), aktivan: true }]);
+   await sb.from('saradnici').delete().eq('id', id);
+   alert('Majstor odobren i prebačen u bazu ✅\nPIN za majstora: ' + pinNovi);
+   ucitajPrijave();
+ } catch(e) {
+   alert('Greška pri odobravanju: ' + e.message);
+ }
 }
 
 async function odbijPrijavu(id) {
