@@ -11,6 +11,7 @@
     navigator.serviceWorker.register('sw.js');
   }
 </script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9...">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -199,6 +200,7 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
+let adminAutorizovan = false;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin"){
@@ -298,9 +300,17 @@ async function crtajStatus(){
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
-// ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA SA SUPABASE SINHRONIZACIJOM =====
-let DM = { majstori: [] }, Prijave = [];
+// ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
+let DM, Prijave;
+try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
+try { Prijave = JSON.parse(localStorage.getItem('prijave_kladovo')); } catch(e) {}
+DM = DM || { majstori: [] };
+Prijave = Prijave || [];
+
 let VM = { p: 'home', filter: '' }, armedM = '';
+const saveM = () => { try { localStorage.setItem('majstori_kladovo', JSON.stringify(DM)); } catch(e) {} };
+const saveP = () => { try { localStorage.setItem('prijave_kladovo', JSON.stringify(Prijave)); } catch(e) {} };
+const uidM = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
 async function posaljiPrijavuSaradnika() {
  const ime = $('sar-ime').value.trim();
@@ -323,7 +333,6 @@ async function posaljiPrijavuSaradnika() {
 }
 
 const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
-
 async function ucitajPrijave() {
  if(!sb) { renderM(); return; }
  const [a, b] = await Promise.all([sb.rpc('s_lista', { p_admin: ADMIN_P }), sb.rpc('a_majstori', { p_admin: ADMIN_P })]);
@@ -335,7 +344,7 @@ async function ucitajPrijave() {
  await prebaciStare();
  renderM();
 }
-
+// jednokratno: majstori sačuvani samo na ovom uređaju prelaze u bazu
 async function prebaciStare() {
  try {
   if(localStorage.getItem('majstori_migrirani')) return;
@@ -343,16 +352,17 @@ async function prebaciStare() {
   const cif = t => String(t || '').replace(/\D/g, '');
   const novi = stari.filter(x => !DM.majstori.some(m => cif(m.telefon) === cif(x.telefon)));
   if(!novi.length) { localStorage.setItem('majstori_migrirani', '1'); return; }
-  for(const x of novi) {
-    await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: x.ime, p_telefon: x.telefon, p_kat: x.usluge || [], p_prioritet: 2, p_napomena: x.napomena || '' });
-  }
+  const ok = confirm('Na ovom uređaju ima ' + novi.length + ' majstora koji nisu u bazi:\n' + novi.map(x => x.ime).join(', ') + '\n\nPrebaciti ih u bazu?');
   localStorage.setItem('majstori_migrirani', '1');
+  if(!ok) return;
+  for(const x of novi) await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: x.ime, p_telefon: x.telefon, p_kat: x.usluge || [], p_prioritet: 2, p_napomena: x.napomena || '' });
   const b = await sb.rpc('a_majstori', { p_admin: ADMIN_P });
   if(!b.error) DM = { majstori: (b.data || []).map(mapM) };
  } catch(e) {}
 }
 
 async function odobriPrijavu(id) {
+ const p = Prijave.find(x => x.id == id); if(!p) return;
  const r = await sb.rpc('s_odobri', { p_admin: ADMIN_P, p_id: Number(id), p_prioritet: 2 });
  if(r.error) return alert('Greška: ' + r.error.message);
  alert('Majstor odobren ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
