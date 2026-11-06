@@ -139,7 +139,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 7.2 · stabilna osnova + zvučni alarm + PIN 929566</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 7 · podaci u zajedničkoj bazi</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
@@ -152,31 +152,13 @@ const SUPABASE_URL = "https://ulbqtvdcepkgawcdfqud.supabase.co";
 const SUPABASE_KEY = "sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5";
 const TELEFON = "+381638434412";
 const IZLAZAK = 3000;
-let ADMIN_P = "929566";   // Postavljen vaš 6-cifreni PIN
+let ADMIN_P = "";   // admin PIN se proverava u bazi
 
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
 let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
-
-// Zvučni alarm za nove zahteve
-let audioCtx = null;
-function playNotificationSound() {
-  try {
-    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.4);
-  } catch(e) {}
-}
 
 // Generisanje zanata u formi za prijavu saradnika
 $("sar-zanati").innerHTML = KATS.map(z => `<label class="zanat-cb"><input type="checkbox" value="${z[1]}"> ${z[1]}</label>`).join('');
@@ -203,7 +185,7 @@ function uzmiGPS(tiho=false){
   navigator.geolocation.getCurrentPosition(p=>{
    lat=p.coords.latitude;
    lng=p.coords.longitude;
-   $("gpsn").innerHTML=`📍 Usnimljeno mesto: <b>${lat.toFixed(5)},${lng.toFixed(5)}</b>`;
+   $("gpsn").innerHTML=`📍 Usnimljeno mesto: <b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b>`;
   },()=>{
    if(!tiho) $("gpsn").textContent="Nije moguće pročitati GPS. Upišite adresu ručno.";
   },{enableHighAccuracy:true,timeout:10000});
@@ -218,30 +200,18 @@ $("mik").onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecog
  if(!R){alert("Govorni unos nije podržan u ovom pregledaču.");return}
  const r=new R();r.lang="sr-RS";r.onresult=e=>{$("opis").value+=(($("opis").value?" ":"")+e.results[0][0].transcript)};r.start();};
 
+let adminAutorizovan = false;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  const t=b.dataset.t;
  if(t==="admin"){
-  const pin=prompt("Unesite 6-cifreni Admin PIN:");
-  if(!pin || pin.trim() !== '929566') { alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
+  if(!ADMIN_P){const pin=prompt("Unesite Admin PIN:");if(!pin)return;ADMIN_P=pin.trim();}
   initMajstoriApp();
-  listenRealtime();
  }
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".pr").forEach(s=>s.classList.remove("on"));
  $(t==="mapa"?"mapa-s":t).classList.add("on");
  $("dno").style.display=t==="prijava"?"flex":"none";
  if(t==="mapa")crtajMapu();if(t==="status")crtajStatus();
 });
-
-// Realtime slušanje novih zahteva i zvučni alarm
-function listenRealtime() {
-  if(!sb) return;
-  sb.channel('admin-realtime')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pozivi' }, payload => {
-      playNotificationSound();
-      ucitajPrijave();
-    })
-    .subscribe();
-}
 
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
@@ -274,7 +244,8 @@ $("slanje").onclick=async()=>{
 📍 *Adresa:* ${d.adresa || 'Vidi GPS lokaciju'}
 🗺️ *Tačna GPS Lokacija problema:* ${mapLink}
 📝 *Opis kvara:* ${d.opis || 'Nema opisa'}
-📞 *Korisnik tel:* ${d.telefon}${fotoUrl ? `📷 *Slika kvara:* ${fotoUrl}\n` : ''}
+📞 *Korisnik tel:* ${d.telefon}
+${fotoUrl ? `📷 *Slika kvara:* ${fotoUrl}\n` : ''}
 ----------------------------------
 📋 *ODGOVOR MAJSTORA (popuniti i poslati nazad):*
 ✅ *PRIHVATAM POSAO:* [ Da / Ne ]
@@ -313,7 +284,7 @@ async function crtajMapu(){
   const gLink = `https://maps.google.com/?q=${p.lat},${p.lng}`;
   L.marker([p.lat,p.lng]).addTo(sloj)
    .bindPopup(`<b>${esc(p.kategorija)}</b><br>${esc(p.adresa||'GPS Lokacija')}<br>
-   <b>Koordinate:</b> ${p.lat.toFixed(5)},${p.lng.toFixed(5)}<br>
+   <b>Koordinate:</b> ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}<br>
    <a href="${gLink}" target="_blank" style="display:inline-block;margin-top:6px;color:#1f9d55;font-weight:bold;">🗺️ Otvori u Google Navigaciji</a>
    ${p.foto_url?`<br><img src="${esc(p.foto_url)}" width="140" style="margin-top:6px;border-radius:6px;">`:""}`);
  });
@@ -322,9 +293,11 @@ async function crtajMapu(){
 async function crtajStatus(){
  const l=await ucitaj();
  $("lista").innerHTML=l.length?l.map(p=>`<div class="st"><img src="${esc(p.foto_url||"")}" alt=""><div>
-  <b>${esc(p.kategorija)}</b>${esc(p.adresa)}<br><small>Prijavljeno: ${fd(p.created_at)}</small><br>${p.lat?`<small><a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank">📍 GPS Lokacija kvara</a></small><br>`:''}
+  <b>${esc(p.kategorija)}</b>${esc(p.adresa)}<br><small>Prijavljeno: ${fd(p.created_at)}</small><br>
+  ${p.lat?`<small><a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank">📍 GPS Lokacija kvara</a></small><br>`:''}
   ${p.cena?`<b style="color:#1b3a7a">Cena: ${Number(p.cena).toLocaleString("sr-RS")} din</b> – ${esc(p.majstor)}${p.termin?", termin "+fd(p.termin):""}<br><small>${esc(p.ponuda_opis)}</small><br>`:""}
-  <span class="bedz ${esc((p.status||"Novo").replace(/[ š]/g,m=>m===" "?"-":"s"))}">${esc(p.status)}</span>${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
+  <span class="bedz ${esc((p.status||"Novo").replace(/[ š]/g,m=>m===" "?"-":"s"))}">${esc(p.status)}</span>
+  ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):
   `<div class="sek">${sb?"Još nema poziva.":"Baza nije podešena – dodaj Supabase ključeve u kodu."}</div>`;}
 
 // ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
@@ -371,7 +344,7 @@ async function ucitajPrijave() {
  await prebaciStare();
  renderM();
 }
-
+// jednokratno: majstori sačuvani samo na ovom uređaju prelaze u bazu
 async function prebaciStare() {
  try {
   if(localStorage.getItem('majstori_migrirani')) return;
@@ -436,4 +409,136 @@ function renderM() {
               <div style="color:var(--sv); font-size:14px;">📞 ${esc(p.telefon)}</div>
               <div class="tags">${(p.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}</div>
               ${p.napomena ? `<div style="font-size:13px; margin-top:6px; color:#555;">${esc(p.napomena)}</div>` : ''}
-              <div style="display:flex; gap:8
+              <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="b-m ok" style="min-height:40px; font-size:15px;" onclick="odobriPrijavu('${p.id}')">✅ Odobri</button>
+                <button class="b-m danger" style="min-height:40px; font-size:15px;" onclick="odbijPrijavu('${p.id}')">❌ Odbij</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <button class="b-m" onclick="goM('majstorNew')">+ Dodaj novog majstora ručno</button>
+      <label for="flt" style="margin-top:12px;">Filtriraj po struci / zanatu:</label>
+      <select id="flt" onchange="VM.filter = this.value; renderM();">
+        <option value="">— Svi majstori (${DM.majstori.length}) —</option>
+        ${KATS.map(z => `<option value="${z[1]}" ${VM.filter==z[1]?'selected':''}>${z[1]}</option>`).join('')}
+      </select>
+      <h3 style="margin-top:20px;">Spisak aktivnih majstora (${lista.length})</h3>
+      ${lista.length === 0 ? '<p style="color:var(--sv)">Trenutno nema aktivnih majstora.</p>' : ''}
+      ${lista.map(m => `
+        <div class="card-m" onclick="goM('majstorV','${m.id}')" style="cursor:pointer">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div>
+              <b style="font-size:18px;">${esc(m.ime)}</b>
+              <div style="color:var(--sv); font-size:14px;">📞 ${esc(m.telefon)}</div>
+            </div>
+            <div>➡️</div>
+          </div>
+          <div class="tags">
+            ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <button class="b-m ghost" style="margin-top:24px;" onclick="goM('bk')">💾 Rezervna kopija (Uvoz/Izvoz)</button>
+    `;
+  } else if(VM.p === 'majstorNew') {
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">Dodaj novog majstora ručno</h3>
+      <label>Ime i prezime / Naziv radnje</label>
+      <input id="mn-ime" placeholder="npr. Petar Petrović">
+      <label>Telefon</label>
+      <input id="mn-tel" type="tel" placeholder="npr. 0631234567">
+      <label style="margin-top:12px;">Izaberite usluge / zanate:</label>
+      <div class="grid-zanati">
+        ${KATS.map(z => `
+          <label class="zanat-cb">
+            <input type="checkbox" value="${z[1]}"> ${z[1]}
+          </label>
+        `).join('')}
+      </div>
+      <label style="margin-top:12px;">Napomena (opciono)</label>
+      <textarea id="mn-nap" placeholder="Radno vreme, cenovnik..."></textarea>
+      <div id="mn-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+      <button class="b-m" style="margin-top:16px;" onclick="saveNewMajstor()">Sačuvaj majstora</button>
+    `;
+  } else if(VM.p === 'majstorV') {
+    const m = DM.majstori.find(x => x.id == VM.id);
+    if(!m) { goM('home'); return; }
+    const telClean = m.telefon.replace(/\D/g, '');
+    const waNum = telClean.startsWith('0') ? '381' + telClean.slice(1) : telClean;
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">${esc(m.ime)}</h3>
+      <div class="card-m">
+        <div style="color:var(--sv); font-size:14px;">Telefon</div>
+        <div style="font-size:20px; font-weight:700; margin-bottom:8px;">${esc(m.telefon)}</div>
+        <div style="color:var(--sv); font-size:14px;">PIN za panel majstora (majstor.html)</div>
+        <div style="font-size:20px; font-weight:700; margin-bottom:8px;">${esc(m.pin)}</div>
+        <div style="color:var(--sv); font-size:14px;">Usluge / Zanati</div>
+        <div class="tags" style="margin-bottom:12px;">
+          ${(m.usluge||[]).map(u => `<span class="tag">${esc(u)}</span>`).join('')}
+        </div>
+        ${m.napomena ? `<div style="color:var(--sv); font-size:14px;">Napomena</div><div>${esc(m.napomena)}</div>` : ''}
+      </div>
+      <a class="b-m" href="tel:${esc(m.telefon)}">📞 Pozovi majstora</a>
+      <a class="b-m ghost" href="https://wa.me/${waNum}" target="_blank">💬 Pošalji WhatsApp poruku</a>
+      <div style="margin-top:20px;">
+        <button class="b-m danger" onclick="delMajstorM('${m.id}')">${armedM == m.id ? 'Pritisnite opet za brisanje' : '🗑️ Obriši majstora'}</button>
+      </div>
+    `;
+  } else if(VM.p === 'bk') {
+    container.innerHTML = `
+      <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
+      <h3 style="margin-top:14px;">Rezervna kopija</h3>
+      <p style="color:var(--sv); font-size:15px;">Podaci baze majstora. Ovde možete kopirati ili učitati podatke.</p>
+      <textarea id="bk-tekst" style="min-height:140px;">${esc(JSON.stringify(DM))}</textarea>
+      <div id="bk-err" style="color:var(--bad); font-weight:600; margin-top:8px;"></div>
+      <button class="b-m" style="margin-top:12px;" onclick="copyBk()">📋 Kopiraj podatke</button>
+      <button class="b-m ghost" onclick="loadBk()">Učitaj podatke iz teksta</button>
+    `;
+  }
+}
+
+async function saveNewMajstor() {
+  const ime = $('mn-ime').value.trim();
+  const tel = $('mn-tel').value.trim();
+  const nap = $('mn-nap').value.trim();
+  const usluge = [...document.querySelectorAll('.grid-zanati input[type="checkbox"]:checked')].map(x => x.value);
+
+  if(!ime || !tel) { $('mn-err').textContent = 'Unesite ime i telefon.'; return; }
+  if(usluge.length === 0) { $('mn-err').textContent = 'Izaberite bar jednu uslugu.'; return; }
+
+  const r = await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: ime, p_telefon: tel, p_kat: usluge, p_prioritet: 2, p_napomena: nap });
+  if(r.error) { $('mn-err').textContent = 'Greška: ' + r.error.message; return; }
+  alert('Majstor sačuvan ✅\nNjegov PIN za panel majstora: ' + r.data + '\n(pošalji mu ga)');
+  VM = { p: 'home', filter: VM.filter };
+  ucitajPrijave();
+}
+
+function copyBk() {
+  const t = $('bk-tekst');
+  t.select();
+  try { document.execCommand('copy'); $('bk-err').style.color='var(--zel)'; $('bk-err').textContent = 'Podaci uspešno kopirani!'; }
+  catch(e) { $('bk-err').textContent = 'Kopiranje nije uspelo.'; }
+}
+
+async function loadBk() {
+  try {
+    const x = JSON.parse($('bk-tekst').value);
+    if(!x.majstori) throw 0;
+    const cif = t => String(t || '').replace(/\D/g, '');
+    for(const m of x.majstori) {
+      if(DM.majstori.some(d => cif(d.telefon) === cif(m.telefon))) continue;
+      await sb.rpc('a_dodaj', { p_admin: ADMIN_P, p_ime: m.ime, p_telefon: m.telefon, p_kat: m.usluge || [], p_prioritet: 2, p_napomena: m.napomena || '' });
+    }
+    VM = { p: 'home', filter: '' };
+    ucitajPrijave();
+  } catch(e) {
+    $('bk-err').textContent = 'Neispravan format teksta.';
+  }
+}
+</script>
+</body>
+</html>
