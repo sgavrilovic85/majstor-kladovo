@@ -76,17 +76,23 @@ async function pozivi(){
   📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
   📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
   ${zav?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
-  <input id="c${p.id}" type="number" inputmode="numeric" placeholder="Cena (din)" value="${p.cena||""}">
+  <input id="c${p.id}" type="number" inputmode="numeric" oninput="IZL[${p.id}]=false" placeholder="Cena (din)" value="${p.cena||""}">
   <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(p.ponuda_opis||"")}">
-  <input id="t${p.id}" type="date" value="${p.termin||""}">
+  <div style="font-size:13px;color:#6b7385;margin-top:8px">Kada stižete na adresu:</div>
+  <div class="chips"><button onclick="za(${p.id},30)">Za 30 min</button><button onclick="za(${p.id},60)">Za 1 h</button><button onclick="za(${p.id},120)">Za 2 h</button></div>
+  <div class="red"><input id="t${p.id}" type="date" value="${p.termin||""}"><input id="v${p.id}" type="time" value="${esc(String(p.termin_vreme||"").slice(0,5))}"></div>
   <div class="red"><button class="nar" onclick="ponuda(${p.id})">${moj?"Izmeni ponudu":"Pošalji ponudu"}</button>
   ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
-function chip(id,i){$("c"+id).value=cen[i].cena;$("o"+id).value=cen[i].naziv}
-function izlazak(id){$("c"+id).value=IZLAZAK;$("o"+id).value="Samo izlazak majstora na teren"}
+const IZL={};
+function chip(id,i){IZL[id]=false;$("c"+id).value=cen[i].cena;$("o"+id).value=cen[i].naziv}
+function izlazak(id){IZL[id]=true;$("c"+id).value=IZLAZAK;$("o"+id).value="Samo izlazak majstora na teren"}
+function za(id,min){const d=new Date(Date.now()+min*60000);$("t"+id).value=iso(d);$("v"+id).value=d.toTimeString().slice(0,5)}
 async function ponuda(id){
  const c=parseInt($("c"+id).value);if(!c)return alert("Upiši cenu.");
- const r=await sb.rpc("m_ponuda",{p_pin:PIN,p_id:id,p_cena:c,p_opis:$("o"+id).value,p_termin:$("t"+id).value||null});
+ const p=lista.find(x=>x.id===id)||{};
+ if(!$("t"+id).value||!$("v"+id).value)return alert("Upiši datum i sat kada stižeš"+(p.hitnost==="Hitno danas"?" (hitna intervencija!)":"")+".");
+ const r=await sb.rpc("m_ponuda",{p_pin:PIN,p_id:id,p_cena:c,p_opis:$("o"+id).value,p_termin:$("t"+id).value,p_vreme:$("v"+id).value,p_izlazak:!!IZL[id]});
  if(r.error)return alert("Greška: "+r.error.message);pozivi();}
 async function stat(id,s){const r=await sb.rpc("m_status",{p_pin:PIN,p_id:id,p_status:s});if(r.error)alert(r.error.message);pozivi();}
 
