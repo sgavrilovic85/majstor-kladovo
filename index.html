@@ -90,9 +90,10 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div class="nap">💶 <b>Izlazak majstora i ekspertiza: <span id="izl"></span> din</b> (za lokal). Za ostale lokacije naplaćuje se <b>120 din dodatno po km</b>. Cenu popravke majstor javlja po slici – vidite je u tabu <b>Status</b>.<span id="slob"></span></div>
  <div class="mreza" id="kats"></div>
  <div class="sek"><h3>2. Uslikaj kvar</h3>
-  <label class="foto" for="fajl">📷 Uslikaj kvar</label>
+  <label class="foto" for="fajl" id="fotolbl">📷 Uslikaj kvar</label>
   <input type="file" id="fajl" accept="image/*" capture="environment" hidden>
-  <img id="pre" alt="Slika kvara"></div>
+  <div id="fotke" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"></div>
+  <small class="n" id="fotn">Možete dodati do 4 slike da se problem bolje vidi.</small></div>
  <div class="sek"><h3>3. Koliko je hitno?</h3>
   <div class="hit" id="hit">
    <button data-h="Hitno danas">🔴 Hitno danas</button>
@@ -145,7 +146,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 12 · cene, termini, plaćanje</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 13 · cene, termini, plaćanje, slike</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
@@ -164,7 +165,7 @@ const IZLAZAK = 3000;
 let ADMIN_P = "";   // admin PIN se proverava u bazi
 
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
-let kat=null,hit="Do sutra",placanje=null,foto=null,lat=null,lng=null;
+let kat=null,hit="Do sutra",placanje=null,fotos=[],lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
@@ -181,13 +182,24 @@ $("plac").onclick=e=>{const b=e.target.closest("button");if(!b)return;placanje=b
 $("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
 
 $("fajl").onchange=e=>{
- foto=e.target.files[0]||null;
- if(foto){
-  $("pre").src=URL.createObjectURL(foto);
-  $("pre").style.display="block";
-  uzmiGPS(true);
- }
+ const f=e.target.files[0];e.target.value="";
+ if(!f)return;
+ if(fotos.length>=4)return alert("Najviše 4 slike.");
+ fotos.push(f);renderFotke();
+ if(fotos.length===1)uzmiGPS(true);
 };
+function renderFotke(){
+ $("fotke").innerHTML=fotos.map((f,i)=>`<div style="position:relative"><img src="${URL.createObjectURL(f)}" alt="" style="width:100%;height:130px;object-fit:cover;border-radius:10px">
+  <button type="button" onclick="fotos.splice(${i},1);renderFotke()" style="position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:18px">×</button></div>`).join("");
+ $("fotolbl").textContent=fotos.length?(fotos.length>=4?"✅ 4 slike (najviše)":"📷 Dodaj još jednu sliku"):"📷 Uslikaj kvar";
+ $("fotolbl").style.display=fotos.length>=4?"none":"block";
+}
+async function smanji(f){
+ try{const b=await createImageBitmap(f);const k=Math.min(1,1280/Math.max(b.width,b.height));
+  const c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);
+  c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+  return await new Promise(r=>c.toBlob(r,"image/jpeg",0.8));}catch(e){return f}
+}
 
 function uzmiGPS(tiho=false){
  if(!tiho) $("gpsn").textContent="Čitam GPS koordinate...";
@@ -236,11 +248,14 @@ $("slanje").onclick=async()=>{
  
  try{
   if(!sb) throw new Error("baza nije dostupna");
-  if(foto){
+  const urls=[];let neuspelo=0;
+  for(const f of fotos){
    const ime=Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
-   const u=await sb.storage.from("photos").upload(ime,foto);
-   if(!u.error) d.foto_url = sb.storage.from("photos").getPublicUrl(ime).data.publicUrl;
+   const u=await sb.storage.from("photos").upload(ime,await smanji(f),{contentType:"image/jpeg"});
+   if(u.error)neuspelo++;else urls.push(sb.storage.from("photos").getPublicUrl(ime).data.publicUrl);
   }
+  if(neuspelo&&!confirm(neuspelo+" slika nije poslata. Poslati poziv bez njih?")){$("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";return}
+  if(urls.length){d.foto_url=urls[0];d.foto_urls=urls}
   const r=await sb.from("pozivi").insert(d);
   if(r.error) throw r.error;
   try{localStorage.setItem("moj_tel",d.telefon)}catch(e){}
@@ -252,8 +267,8 @@ $("slanje").onclick=async()=>{
  $("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";
 };
 
-function reset(){placanje=null;document.querySelectorAll("#plac button").forEach(x=>x.classList.remove("on"));kat=null;foto=null;lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
- $("pre").style.display="none";$("gpsn").textContent="";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));}
+function reset(){placanje=null;document.querySelectorAll("#plac button").forEach(x=>x.classList.remove("on"));kat=null;fotos=[];renderFotke();lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
+ $("gpsn").textContent="";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));}
 
 let SLOB={};
 if(sb)sb.from("slobodno_po_kat").select("*").then(r=>(r.data||[]).forEach(x=>SLOB[x.kategorija]=x.datum));
@@ -350,6 +365,10 @@ async function posaljiPrijavuSaradnika() {
  $('sar-err').textContent = '';
 }
 
+function galerija(z){
+ const l=(z.foto_urls&&z.foto_urls.length)?z.foto_urls:(z.foto_url?[z.foto_url]:[]);
+ return l.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${l.map(u=>`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="" style="width:92px;height:92px;object-fit:cover;border-radius:8px"></a>`).join("")}</div>`:"";
+}
 const mapM = m => ({ id: m.id, ime: m.ime, telefon: m.telefon || '', usluge: m.kategorije || [], napomena: m.napomena || '', pin: m.pin, prioritet: m.prioritet });
 let audioCtx = null;
 function playNotificationSound() {
@@ -480,7 +499,7 @@ function renderM() {
               <b style="font-size:16px; color:var(--plava);">${esc(z.kategorija)} · ${esc(z.hitnost)}</b>
               <span class="bedz ${esc((z.status || 'Novo').replace(/ /g, '-'))}">${esc(z.status)}</span>
             </div>
-            ${z.foto_url ? `<a href="${esc(z.foto_url)}" target="_blank"><img src="${esc(z.foto_url)}" alt="" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-top:8px;"></a>` : ''}
+            ${galerija(z)}
             <div style="font-size:14px; margin-top:6px;"><b>Opis:</b> ${esc(z.opis || 'Nema opisa')}</div>
             <div style="font-size:14px;"><b>Tel:</b> <a href="tel:${esc(z.telefon)}">${esc(z.telefon)}</a></div>
             <div style="font-size:14px;"><b>Adresa:</b> ${esc(z.adresa || 'GPS lokacija')} ${z.lat ? `<a target="_blank" href="https://maps.google.com/?q=${z.lat},${z.lng}">📍 mapa</a>` : ''}</div>
