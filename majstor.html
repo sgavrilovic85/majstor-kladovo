@@ -82,10 +82,11 @@ async function pozivi(){
  const r=await sb.rpc("m_pozivi",{p_pin:PIN});lista=r.data||[];
  $("poz").innerHTML=lista.length?lista.map(p=>{
   const moj=p.majstor_id===M.id,zav=p.status==="Završeno";
-  return `<div class="k"><div class="poz">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="">`:""}
+  return `<div class="k"><div class="poz">
   <div><b>${esc(p.kategorija)}</b> <span class="b">${esc(p.hitnost)}</span><br>${esc(p.opis)||"<i>bez opisa</i>"}<br>
   📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
   📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
+  ${galerija(p)}
   ${zav?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
   <input id="c${p.id}" type="number" inputmode="numeric" oninput="IZL[${p.id}]=false" placeholder="Cena (din)" value="${p.cena||""}">
   <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(p.ponuda_opis||"")}">
@@ -95,6 +96,10 @@ async function pozivi(){
   <div class="red"><button class="nar" onclick="ponuda(${p.id})">${p.cena?"Izmeni ponudu":"Pošalji ponudu"}</button>
   ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}${placanjeBlok(p,moj)}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
+function galerija(p){
+ const l=(p.foto_urls&&p.foto_urls.length)?p.foto_urls:(p.foto_url?[p.foto_url]:[]);
+ return l.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${l.map(u=>`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="" style="width:92px;height:92px;object-fit:cover;border-radius:8px"></a>`).join("")}</div>`:"";
+}
 function placanjeBlok(p,moj){
  if(!moj||!p.cena_klijent)return "";
  const iznos=Number(p.cena_klijent).toLocaleString("sr-RS"),banka=p.placanje==="banka";
