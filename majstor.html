@@ -82,7 +82,7 @@ async function pozivi(){
  const r=await sb.rpc("m_pozivi",{p_pin:PIN});lista=r.data||[];
  $("poz").innerHTML=lista.length?lista.map(p=>{
   const moj=p.majstor_id===M.id,zav=p.status==="Završeno";
-  return `<div class="k"><div class="poz"><img src="${esc(p.foto_url||"")}" alt="">
+  return `<div class="k"><div class="poz">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="">`:""}
   <div><b>${esc(p.kategorija)}</b> <span class="b">${esc(p.hitnost)}</span><br>${esc(p.opis)||"<i>bez opisa</i>"}<br>
   📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
   📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
@@ -92,7 +92,7 @@ async function pozivi(){
   <div style="font-size:13px;color:#6b7385;margin-top:8px">Kada stižete na adresu:</div>
   <div class="chips"><button onclick="za(${p.id},30)">Za 30 min</button><button onclick="za(${p.id},60)">Za 1 h</button><button onclick="za(${p.id},120)">Za 2 h</button></div>
   <div class="red"><input id="t${p.id}" type="date" value="${p.termin||""}"><input id="v${p.id}" type="time" value="${esc(String(p.termin_vreme||"").slice(0,5))}"></div>
-  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${moj?"Izmeni ponudu":"Pošalji ponudu"}</button>
+  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${p.cena?"Izmeni ponudu":"Pošalji ponudu"}</button>
   ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}${placanjeBlok(p,moj)}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
 function placanjeBlok(p,moj){
