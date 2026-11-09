@@ -78,23 +78,27 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".p").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));
  if(b.dataset.t==="poz")pozivi();});
 
+let MOJE={};
 async function pozivi(){
- const r=await sb.rpc("m_pozivi",{p_pin:PIN});lista=r.data||[];
+ const [r,o]=await Promise.all([sb.rpc("m_pozivi",{p_pin:PIN}),sb.rpc("m_ponude",{p_pin:PIN})]);
+ lista=r.data||[];MOJE={};(o.data||[]).forEach(x=>MOJE[x.poziv_id]=x);
  $("poz").innerHTML=lista.length?lista.map(p=>{
-  const moj=p.majstor_id===M.id,zav=p.status==="Završeno";
+  const moj=p.majstor_id===M.id,zav=p.status==="Završeno",prihv=["Prihvaćeno","U toku"].includes(p.status),mo=MOJE[p.id];
+  const info=mo?` · tvoja ponuda ${mo.cena} din (${mo.status==="Poslata"?"čeka klijenta":mo.status})`:(p.cena&&moj?" · "+p.cena+" din":"");
   return `<div class="k"><div class="poz">
   <div><b>${esc(p.kategorija)}</b> <span class="b">${esc(p.hitnost)}</span><br>${esc(p.opis)||"<i>bez opisa</i>"}<br>
   📍 ${esc(p.adresa)} ${p.lat?`<a target="_blank" href="https://maps.google.com/?q=${p.lat},${p.lng}">mapa</a>`:""}<br>
-  📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${p.cena?" · "+p.cena+" din":""}</small></div></div>
+  📞 <a href="tel:${esc(p.telefon)}">${esc(p.telefon)}</a><br><small>${fd(p.created_at)} · <b>${esc(p.status)}</b>${info}</small></div></div>
   ${galerija(p)}
-  ${zav?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
-  <input id="c${p.id}" type="number" inputmode="numeric" oninput="IZL[${p.id}]=false" placeholder="Cena (din)" value="${p.cena||""}">
-  <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(p.ponuda_opis||"")}">
+  ${prihv&&moj?`<div style="margin-top:8px;padding:10px;background:#ecfdf5;border-radius:10px"><b>✅ Klijent je prihvatio tvoju ponudu</b> – ${esc(p.cena)} din, dolaziš ${fd(p.termin)}${p.termin_vreme?" u "+String(p.termin_vreme).slice(0,5):""}</div>
+  <div class="red"><button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button></div>`:""}
+  ${(zav||prihv)?"":`<div class="chips">${cen.map((x,i)=>`<button onclick="chip(${p.id},${i})">${esc(x.naziv)} ${esc(x.cena)}</button>`).join("")}<button onclick="izlazak(${p.id})">Samo izlazak ${IZLAZAK}</button></div>
+  <input id="c${p.id}" type="number" inputmode="numeric" oninput="IZL[${p.id}]=false" placeholder="Cena (din)" value="${mo?mo.cena:""}">
+  <input id="o${p.id}" placeholder="Napomena (šta je u ceni)" value="${esc(mo?mo.opis||"":"")}">
   <div style="font-size:13px;color:#6b7385;margin-top:8px">Kada stižete na adresu:</div>
   <div class="chips"><button onclick="za(${p.id},30)">Za 30 min</button><button onclick="za(${p.id},60)">Za 1 h</button><button onclick="za(${p.id},120)">Za 2 h</button></div>
-  <div class="red"><input id="t${p.id}" type="date" value="${p.termin||""}"><input id="v${p.id}" type="time" value="${esc(String(p.termin_vreme||"").slice(0,5))}"></div>
-  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${p.cena?"Izmeni ponudu":"Pošalji ponudu"}</button>
-  ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}${placanjeBlok(p,moj)}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
+  <div class="red"><input id="t${p.id}" type="date" value="${mo?mo.termin||"":""}"><input id="v${p.id}" type="time" value="${esc(String(mo?mo.termin_vreme||"":"").slice(0,5))}"></div>
+  <div class="red"><button class="nar" onclick="ponuda(${p.id})">${mo&&mo.status==="Poslata"?"Izmeni ponudu":"Pošalji ponudu"}</button></div>`}${placanjeBlok(p,moj)}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
 function galerija(p){
  const l=(p.foto_urls&&p.foto_urls.length)?p.foto_urls:(p.foto_url?[p.foto_url]:[]);
