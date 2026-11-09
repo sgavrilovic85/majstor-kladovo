@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{--plava:#1b3a7a;--nar:#f26a1b;--zel:#1f9d55;--bg:#f2f4f8;--k:#fff;--tx:#1d2433;--sv:#6b7385;--bad:#b3261e;--bd:#d5dcd8}
 *{box-sizing:border-box}
@@ -97,6 +98,10 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
    <button data-h="Hitno danas">🔴 Hitno danas</button>
    <button data-h="Do sutra" class="on">🟠 Do sutra</button>
    <button data-h="Nije hitno">🟢 Nije hitno</button></div></div>
+ <div class="sek"><h3>Način plaćanja</h3>
+  <div class="hit" id="plac" style="grid-template-columns:1fr 1fr">
+   <button data-p="kes">💵 Keš<br><small>majstoru na licu mesta</small></button>
+   <button data-p="banka">🏦 Preko banke<br><small>QR kod na telefonu</small></button></div></div>
  <div class="sek"><h3>4. Opis kvara (opciono)</h3>
   <textarea id="opis" placeholder="Npr. curi ventil u kupatilu, zagušen slivnik..."></textarea>
   <div class="red"><button class="mali" id="mik">🎤 Izgovori opis</button></div></div>
@@ -140,12 +145,15 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 11 · cene, termini i obaveštenja</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 12 · cene, termini, plaćanje</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
  <button id="slanje">Pošalji poziv majstoru</button>
 </div>
+<div id="qrm" style="display:none;position:fixed;inset:0;background:#000b;z-index:60;align-items:center;justify-content:center;padding:16px"><div style="background:#fff;border-radius:16px;padding:20px;text-align:center;max-width:340px">
+ <h3 style="margin:0 0 10px">🏦 Plaćanje preko banke</h3><div id="qrslika" style="display:inline-block;background:#fff;padding:8px"></div>
+ <p id="qrinfo" style="font-size:14px"></p><button class="mali" style="width:100%;background:var(--plava);color:#fff;padding:12px" onclick="$('qrm').style.display='none'">Zatvori</button></div></div>
 <div id="ok"><div><h2>✅ Poziv poslat!</h2><p>Javićemo vam se uskoro.</p><button onclick="this.closest('#ok').style.display='none'">U redu</button></div></div>
 
 <script>
@@ -156,7 +164,7 @@ const IZLAZAK = 3000;
 let ADMIN_P = "";   // admin PIN se proverava u bazi
 
 const KATS=[["vodoinstalater","Vodoinstalater"],["elektricar","Električar"],["grejanje-klima","Grejanje / Klima"],["ciscenje","Čišćenje"],["limar","Limar"],["lift","Lift"],["pomoc-u-kuci","Pomoć u kući"],["keramicar","Keramičar"],["moler","Moler"],["basta-dvoriste","Bašta / Dvorište"],["gradjevinar","Građevinar"],["stolar","Stolar"]];
-let kat=null,hit="Do sutra",foto=null,lat=null,lng=null;
+let kat=null,hit="Do sutra",placanje=null,foto=null,lat=null,lng=null;
 const $=id=>document.getElementById(id);
 $("zovi").href="tel:"+TELEFON;$("izl").textContent=IZLAZAK.toLocaleString("sr-RS");
 const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
@@ -169,6 +177,7 @@ OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.
 KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="'+i+'.webp" alt="'+n+'">';
  b.onclick=()=>{kat=n;document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));b.classList.add("on");pokaziSlob()};$("kats").appendChild(b)});
 $("kats").appendChild(OSTALO);
+$("plac").onclick=e=>{const b=e.target.closest("button");if(!b)return;placanje=b.dataset.p;[...$("plac").children].forEach(x=>x.classList.toggle("on",x===b))};
 $("hit").onclick=e=>{const b=e.target.closest("button");if(!b)return;hit=b.dataset.h;[...$("hit").children].forEach(x=>x.classList.toggle("on",x===b))};
 
 $("fajl").onchange=e=>{
@@ -218,10 +227,11 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
 
 $("slanje").onclick=async()=>{
  if(!kat)return alert("Izaberite šta vam treba (korak 1).");
+ if(!placanje)return alert("Izaberite način plaćanja: keš ili preko banke.");
  if(!$("tel").value.trim())return alert("Upišite vaš telefon.");
  if(!$("adresa").value.trim()&&lat==null)return alert("Upišite adresu ili pritisnite Moja lokacija.");
  
- const d={kategorija:kat,hitnost:hit,opis:$("opis").value.trim(),adresa:$("adresa").value.trim(),telefon:$("tel").value.trim(),lat,lng};
+ const d={kategorija:kat,hitnost:hit,placanje,opis:$("opis").value.trim(),adresa:$("adresa").value.trim(),telefon:$("tel").value.trim(),lat,lng};
  $("slanje").disabled=true;$("slanje").textContent="Šaljem...";
  
  try{
@@ -242,7 +252,7 @@ $("slanje").onclick=async()=>{
  $("slanje").disabled=false;$("slanje").textContent="Pošalji poziv majstoru";
 };
 
-function reset(){kat=null;foto=null;lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
+function reset(){placanje=null;document.querySelectorAll("#plac button").forEach(x=>x.classList.remove("on"));kat=null;foto=null;lat=lng=null;["opis","adresa","tel","fajl"].forEach(i=>$(i).value="");
  $("pre").style.display="none";$("gpsn").textContent="";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));}
 
 let SLOB={};
@@ -280,6 +290,17 @@ async function crtajStatus(){
   <button class="mali" style="width:100%;background:var(--plava);color:#fff;padding:13px" onclick="prikaziMoje()">Prikaži moje pozive i ponude</button></div><div id="st-rez"></div>`;
  if(tel)prikaziMoje();
 }
+function pokaziQR(tekst,iznos){
+ $("qrslika").innerHTML="";
+ new QRCode($("qrslika"),{text:tekst,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
+ $("qrinfo").textContent="Iznos: "+Number(iznos).toLocaleString("sr-RS")+" din. Otvorite aplikaciju svoje banke i izaberite „Skeniraj IPS QR“.";
+ $("qrm").style.display="flex";
+}
+async function platiQR(id,iznos){
+ const r=await sb.rpc("k_qr",{p_tel:$("st-tel").value.trim(),p_id:id});
+ if(r.error||!r.data)return alert("QR kod trenutno nije dostupan. Pozovite nas: 063 84 34 412");
+ pokaziQR(r.data,iznos);
+}
 async function prikaziMoje(){
  const tel=$("st-tel").value.trim();
  if(tel.replace(/\D/g,"").length<6)return alert("Upišite broj telefona.");
@@ -291,6 +312,8 @@ async function prikaziMoje(){
   <b>${esc(p.kategorija)} · ${esc(p.hitnost)}</b><small>Poslato: ${fd(p.created_at)}</small><br>
   ${p.cena?`<b style="color:#1b3a7a;font-size:17px">Cena: ${Number(p.cena).toLocaleString("sr-RS")} din</b><br>Majstor: ${esc(p.majstor||"")}<br>
   <b>Dolazi: ${fd(p.termin)}${p.termin_vreme?" u "+String(p.termin_vreme).slice(0,5):""}</b><br>${p.ponuda_opis?`<small>${esc(p.ponuda_opis)}</small><br>`:""}`:"<small>Čeka se ponuda majstora...</small><br>"}
+  ${p.cena?`<small>${p.placanje==="banka"?"🏦 Plaćanje preko banke":"💵 Plaćanje kešom"}</small><br>`:""}
+  ${p.placeno?`<b style="color:#1f9d55">✅ Plaćeno</b><br>`:(p.placanje==="banka"&&p.status==="Završeno"&&p.cena?`<button class="mali" style="background:var(--nar);color:#fff;border:0;margin:6px 0;width:100%" onclick="platiQR(${p.id},${p.cena})">💳 Plati QR kodom (${Number(p.cena).toLocaleString("sr-RS")} din)</button><br>`:"")}
   <span class="bedz ${esc((p.status||"Novo").replace(/ /g,"-"))}">${esc(p.status)}</span>
   ${p.zavrseno_at?`<small> Završeno: ${fd(p.zavrseno_at)}</small>`:""}</div></div>`).join(""):`<div class="sek">Nema poziva za ovaj broj.</div>`;
 }
@@ -461,6 +484,7 @@ function renderM() {
             <div style="font-size:14px; margin-top:6px;"><b>Opis:</b> ${esc(z.opis || 'Nema opisa')}</div>
             <div style="font-size:14px;"><b>Tel:</b> <a href="tel:${esc(z.telefon)}">${esc(z.telefon)}</a></div>
             <div style="font-size:14px;"><b>Adresa:</b> ${esc(z.adresa || 'GPS lokacija')} ${z.lat ? `<a target="_blank" href="https://maps.google.com/?q=${z.lat},${z.lng}">📍 mapa</a>` : ''}</div>
+            <div style="font-size:13px; margin-top:4px;">💳 ${z.placanje === 'banka' ? 'Preko banke (QR)' : 'Keš'} ${z.placeno ? '· <b style="color:#1f9d55">✅ plaćeno</b>' : ''}</div>
             ${z.cena ? `<div style="font-size:14px; background:#ecfdf5; border-radius:8px; padding:8px; margin-top:6px;">
               <b>Majstor traži:</b> ${esc(z.cena)} din → <b>klijent plaća: ${esc(z.cena_klijent)} din</b><br>
               <b>Dolazi:</b> ${z.termin ? esc(new Date(z.termin).toLocaleDateString('sr-RS')) : '?'}${z.termin_vreme ? ' u ' + esc(String(z.termin_vreme).slice(0,5)) : ''}
