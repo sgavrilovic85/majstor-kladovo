@@ -55,7 +55,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
 .st img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:#e6e9f1;flex:none}
 .st b{display:block}
 .bedz{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
-.Završeno{background:var(--zel)}.Dodeljeno{background:#e0a100}.Ponuda{background:#2563eb}.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
+.Završeno{background:var(--zel)}.Prihvaćeno{background:#1f9d55}.Odbijeno{background:#6b7385}.Dodeljeno{background:#e0a100}.Ponuda{background:#2563eb}.Novo{background:#d94b3d}.U-toku{background:#e0a100}.Zavrseno{background:var(--zel)}
 .nap{background:#fff7e6;border:1px solid #f3d49a;border-radius:12px;padding:11px;font-size:14px;margin-bottom:12px}
 .pr{display:none}.pr.on{display:block}
 #ok{display:none;position:fixed;inset:0;background:#000a;z-index:50;align-items:center;justify-content:center;padding:20px}
@@ -146,7 +146,7 @@ small.n{display:block;margin-top:8px;color:var(--sv);font-size:13px;text-align:c
  <div id="admin-sadrzaj"></div>
 </section>
 </main>
-<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 13 · cene, termini, plaćanje, slike</div>
+<div style="text-align:center;font-size:12px;color:#8a93a6;padding:6px 0 90px">Verzija 14 · ponude, plaćanje, slike</div>
 
 <div class="dno" id="dno">
  <a class="zovi" id="zovi" href="tel:+381638434412">📞 Pozovi</a>
@@ -316,17 +316,41 @@ async function platiQR(id,iznos){
  if(r.error||!r.data)return alert("QR kod trenutno nije dostupan. Pozovite nas: 063 84 34 412");
  pokaziQR(r.data,iznos);
 }
+let PON={};
+function ponudeHtml(p){
+ if(p.status==="Odbijeno")return "<small>Odbili ste sve ponude. Zahtev je zatvoren.</small><br>";
+ const l=(PON[p.id]||[]).filter(o=>o.status==="Poslata");
+ if(!l.length)return "<small>Čeka se ponuda majstora...</small><br>";
+ return `<b>Stigle ponude (${l.length}):</b>`+l.map(o=>`<div style="border:1px solid #cfd5e3;border-radius:10px;padding:8px;margin:6px 0">
+  <b style="color:#1b3a7a;font-size:17px">${Number(o.cena).toLocaleString("sr-RS")} din</b> · ${esc(o.majstor)}<br>
+  <small>Dolazi: ${fd(o.termin)}${o.termin_vreme?" u "+String(o.termin_vreme).slice(0,5):""}${o.opis?" · "+esc(o.opis):""}</small>
+  <button class="mali" style="width:100%;background:#1f9d55;color:#fff;border:0;margin-top:6px" onclick="prihvati(${o.id})">✅ Prihvatam ovu ponudu</button></div>`).join("")
+  +`<button class="mali" style="width:100%;margin:4px 0 8px" onclick="odbijSve(${p.id})">✖ Ne prihvatam nijednu ponudu</button>`;
+}
+async function prihvati(id){
+ if(!confirm("Prihvatate ovu ponudu?"))return;
+ const r=await sb.rpc("k_prihvati",{p_tel:$("st-tel").value.trim(),p_ponuda:id});
+ if(r.error)return alert("Greška: "+r.error.message);
+ prikaziMoje();
+}
+async function odbijSve(id){
+ if(!confirm("Odbiti sve ponude? Zahtev će biti zatvoren."))return;
+ const r=await sb.rpc("k_odbij",{p_tel:$("st-tel").value.trim(),p_poziv:id});
+ if(r.error)return alert("Greška: "+r.error.message);
+ prikaziMoje();
+}
 async function prikaziMoje(){
  const tel=$("st-tel").value.trim();
  if(tel.replace(/\D/g,"").length<6)return alert("Upišite broj telefona.");
  try{localStorage.setItem("moj_tel",tel)}catch(e){}
  if(!sb)return;
- const r=await sb.rpc("k_pozivi",{p_tel:tel});
+ const [r,po]=await Promise.all([sb.rpc("k_pozivi",{p_tel:tel}),sb.rpc("k_ponude",{p_tel:tel})]);
+ PON={};(po.data||[]).forEach(x=>{(PON[x.poziv_id]=PON[x.poziv_id]||[]).push(x)});
  const l=r.data||[];
  $("st-rez").innerHTML=r.error?`<div class="sek">Greška: ${esc(r.error.message)}</div>`:l.length?l.map(p=>`<div class="st">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="">`:""}<div>
   <b>${esc(p.kategorija)} · ${esc(p.hitnost)}</b><small>Poslato: ${fd(p.created_at)}</small><br>
   ${p.cena?`<b style="color:#1b3a7a;font-size:17px">Cena: ${Number(p.cena).toLocaleString("sr-RS")} din</b><br>Majstor: ${esc(p.majstor||"")}<br>
-  <b>Dolazi: ${fd(p.termin)}${p.termin_vreme?" u "+String(p.termin_vreme).slice(0,5):""}</b><br>${p.ponuda_opis?`<small>${esc(p.ponuda_opis)}</small><br>`:""}`:"<small>Čeka se ponuda majstora...</small><br>"}
+  <b>Dolazi: ${fd(p.termin)}${p.termin_vreme?" u "+String(p.termin_vreme).slice(0,5):""}</b><br>${p.ponuda_opis?`<small>${esc(p.ponuda_opis)}</small><br>`:""}`:ponudeHtml(p)}
   ${p.cena?`<small>${p.placanje==="banka"?"🏦 Plaćanje preko banke":"💵 Plaćanje kešom"}</small><br>`:""}
   ${p.placeno?`<b style="color:#1f9d55">✅ Plaćeno</b><br>`:(p.placanje==="banka"&&p.status==="Završeno"&&p.cena?`<button class="mali" style="background:var(--nar);color:#fff;border:0;margin:6px 0;width:100%" onclick="platiQR(${p.id},${p.cena})">💳 Plati QR kodom (${Number(p.cena).toLocaleString("sr-RS")} din)</button><br>`:"")}
   <span class="bedz ${esc((p.status||"Novo").replace(/ /g,"-"))}">${esc(p.status)}</span>
@@ -334,7 +358,7 @@ async function prikaziMoje(){
 }
 
 // ===== INTEGRISANA BAZA MAJSTORA I PRIJAVA =====
-let DM, Prijave, PoziviList = [], znaniPozivi = null, lastSig = '', pollId = null;
+let DM, Prijave, PoziviList = [], PonudeList = [], znaniPozivi = null, lastSig = '', pollId = null;
 try { DM = JSON.parse(localStorage.getItem('majstori_kladovo')); } catch(e) {}
 try { Prijave = JSON.parse(localStorage.getItem('prijave_kladovo')); } catch(e) {}
 DM = DM || { majstori: [] };
@@ -385,21 +409,23 @@ function playNotificationSound() {
 }
 async function ucitajPrijave(tiho) {
  if(!sb) { renderM(); return; }
- const [a, b, c] = await Promise.all([
+ const [a, b, c, d] = await Promise.all([
   sb.rpc('s_lista', { p_admin: ADMIN_P }),
   sb.rpc('a_majstori', { p_admin: ADMIN_P }),
-  sb.rpc('a_pozivi', { p_admin: ADMIN_P })
+  sb.rpc('a_pozivi', { p_admin: ADMIN_P }),
+  sb.rpc('a_ponude', { p_admin: ADMIN_P })
  ]);
- const err = a.error || b.error || c.error;
+ const err = a.error || b.error || c.error || d.error;
  if(err && /PIN/.test(err.message)) { ADMIN_P = ''; alert('Pogrešan PIN!'); document.querySelector('.tabs button[data-t="prijava"]').click(); return; }
  if(err && !tiho) alert('Greška pri učitavanju: ' + err.message);
  Prijave = a.data || [];
  DM = { majstori: (b.data || []).map(mapM) };
  PoziviList = c.data || [];
+ PonudeList = d.data || [];
  if(znaniPozivi && PoziviList.some(x => !znaniPozivi.has(x.id))) playNotificationSound();
  znaniPozivi = new Set(PoziviList.map(x => x.id));
  if(!tiho) await prebaciStare();
- const sig = JSON.stringify([Prijave, DM, PoziviList]);
+ const sig = JSON.stringify([Prijave, DM, PoziviList, PonudeList]);
  if(!tiho || sig !== lastSig) { lastSig = sig; renderM(); }
 }
 // provera novih poziva na svakih 15 sekundi dok je admin tab otvoren
@@ -409,6 +435,12 @@ function pokreniProveru() {
   const el = document.getElementById('admin');
   if(ADMIN_P && el && el.classList.contains('on') && VM.p === 'home') ucitajPrijave(true);
  }, 15000);
+}
+async function adminPrihvati(id) {
+ if(!confirm('Prihvatiti ovu ponudu u ime klijenta?')) return;
+ const r = await sb.rpc('a_prihvati', { p_admin: ADMIN_P, p_ponuda: Number(id) });
+ if(r.error) return alert('Greška: ' + r.error.message);
+ ucitajPrijave();
 }
 async function assignMajstorToCall(pozivId, majstorId) {
  if(!majstorId) return;
@@ -504,6 +536,9 @@ function renderM() {
             <div style="font-size:14px;"><b>Tel:</b> <a href="tel:${esc(z.telefon)}">${esc(z.telefon)}</a></div>
             <div style="font-size:14px;"><b>Adresa:</b> ${esc(z.adresa || 'GPS lokacija')} ${z.lat ? `<a target="_blank" href="https://maps.google.com/?q=${z.lat},${z.lng}">📍 mapa</a>` : ''}</div>
             <div style="font-size:13px; margin-top:4px;">💳 ${z.placanje === 'banka' ? 'Preko banke (QR)' : 'Keš'} ${z.placeno ? '· <b style="color:#1f9d55">✅ plaćeno</b>' : ''}</div>
+            ${PonudeList.filter(o => o.poziv_id == z.id).map(o => `<div style="font-size:13px; background:#fff; border:1px solid #cfd5e3; border-radius:8px; padding:6px; margin-top:6px;">
+              <b>${esc(o.majstor)}</b>: majstor ${esc(o.cena)} → klijent ${esc(o.cena_klijent)} din · ${esc(o.status)}
+              ${o.status === 'Poslata' ? `<button style="margin-left:6px; padding:3px 8px; border:0; border-radius:6px; background:#1f9d55; color:#fff;" onclick="adminPrihvati(${o.id})">Prihvati u ime klijenta</button>` : ''}</div>`).join('')}
             ${z.cena ? `<div style="font-size:14px; background:#ecfdf5; border-radius:8px; padding:8px; margin-top:6px;">
               <b>Majstor traži:</b> ${esc(z.cena)} din → <b>klijent plaća: ${esc(z.cena_klijent)} din</b><br>
               <b>Dolazi:</b> ${z.termin ? esc(new Date(z.termin).toLocaleDateString('sr-RS')) : '?'}${z.termin_vreme ? ' u ' + esc(String(z.termin_vreme).slice(0,5)) : ''}
