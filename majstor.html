@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panel majstora</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{--p:#1b3a7a;--n:#f26a1b;--z:#1f9d55}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f2f4f8;color:#1d2433}
@@ -32,15 +33,24 @@ a{color:var(--p);font-weight:700}
  <div class="red"><button class="nar" onclick="ulaz()">Uđi</button></div></div>
 <div id="app" style="display:none">
  <div class="k"><b id="ime"></b></div>
- <div class="tabs"><button class="on" data-t="poz">Pozivi</button><button data-t="cen">Cenovnik</button><button data-t="kal">Kalendar</button></div>
+ <div class="tabs"><button class="on" data-t="poz">Pozivi</button><button data-t="cen">Cenovnik</button><button data-t="kal">Kalendar</button><button data-t="upl">Uplata</button></div>
  <div style="height:12px"></div>
  <section class="p on" id="poz"></section>
  <section class="p" id="cen"><div class="k"><div id="redovi"></div>
   <div class="red"><button class="sv" onclick="cen.push({naziv:'',cena:''});crtCen()">+ Dodaj uslugu</button><button class="zel" onclick="snimiCen()">Sačuvaj</button></div></div></section>
+ <section class="p" id="upl"><div class="k"><b>Podaci za uplatu preko banke</b>
+  <p style="font-size:13px;color:#6b7385;margin:4px 0 6px">Ovo se upisuje u QR kod koji klijent skenira. Proverite broj računa.</p>
+  <input id="u-naziv" placeholder="Ime i prezime ili naziv firme/radnje">
+  <input id="u-racun" inputmode="numeric" placeholder="Žiro račun, npr. 160-0000000000000-00">
+  <input id="u-mesto" placeholder="Mesto (npr. Kladovo)">
+  <div class="red"><button class="zel" onclick="snimiUplatu()">Sačuvaj podatke</button></div></div></section>
  <section class="p" id="kal"><div class="k"><b>Obeleži dane kad si slobodan</b><p style="font-size:13px;color:#6b7385;margin:4px 0 10px">Zeleno = slobodan. Klijenti vide najbliži slobodan termin.</p>
   <div class="dani" id="dani"></div><div class="red"><button class="zel" onclick="snimiKal()">Sačuvaj kalendar</button></div></div></section>
 </div>
 </main>
+<div id="qrm" style="display:none;position:fixed;inset:0;background:#000b;z-index:60;align-items:center;justify-content:center;padding:16px"><div style="background:#fff;border-radius:16px;padding:20px;text-align:center;max-width:340px">
+ <h3 style="margin:0 0 10px">💳 QR za uplatu</h3><div id="qrslika" style="display:inline-block;background:#fff;padding:8px"></div>
+ <p id="qrinfo" style="font-size:14px"></p><button style="width:100%" onclick="$('qrm').style.display='none'">Zatvori</button></div></div>
 <script>
 const SUPABASE_URL="https://ulbqtvdcepkgawcdfgud.supabase.co";
 const SUPABASE_KEY="sb_publishable_r6_CzN6zP-asRrcoUZHT7w_pwyt5uS5";
@@ -60,6 +70,7 @@ async function ulaz(){
  PIN=pin;M=r.data;try{localStorage.setItem("mpin",pin)}catch(e){}
  cen=M.cenovnik||[];dani=new Set((M.slobodni||[]).map(d=>String(d).slice(0,10)));
  $("login").style.display="none";$("app").style.display="block";$("ime").textContent=M.ime+" – "+(M.kategorije||[]).join(", ");
+ $("u-naziv").value=M.naziv_uplata||"";$("u-racun").value=M.racun||"";$("u-mesto").value=M.mesto_uplata||"";
  crtCen();crtKal();pozivi();}
 
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
@@ -82,8 +93,31 @@ async function pozivi(){
   <div class="chips"><button onclick="za(${p.id},30)">Za 30 min</button><button onclick="za(${p.id},60)">Za 1 h</button><button onclick="za(${p.id},120)">Za 2 h</button></div>
   <div class="red"><input id="t${p.id}" type="date" value="${p.termin||""}"><input id="v${p.id}" type="time" value="${esc(String(p.termin_vreme||"").slice(0,5))}"></div>
   <div class="red"><button class="nar" onclick="ponuda(${p.id})">${moj?"Izmeni ponudu":"Pošalji ponudu"}</button>
-  ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
+  ${moj?`<button class="sv" onclick="stat(${p.id},'U toku')">U toku</button><button class="zel" onclick="stat(${p.id},'Završeno')">Završeno</button>`:""}</div>`}${placanjeBlok(p,moj)}</div>`}).join(""):'<div class="k">Nema poziva za vaše kategorije.</div>';}
 
+function placanjeBlok(p,moj){
+ if(!moj||!p.cena_klijent)return "";
+ const iznos=Number(p.cena_klijent).toLocaleString("sr-RS"),banka=p.placanje==="banka";
+ if(p.placeno)return `<div style="margin-top:10px;padding:10px;background:#ecfdf5;border-radius:10px"><b>✅ Plaćeno</b> – ${iznos} din (${banka?"banka":"keš"})</div>`;
+ return `<div style="margin-top:10px;padding:10px;background:#fff7e6;border-radius:10px"><b>${banka?"🏦 Plaća preko banke (QR)":"💵 Plaća kešom"}</b> – ${iznos} din
+ <div class="red">${banka?`<button class="nar" onclick="prikaziQR(${p.id},${p.cena_klijent})">💳 Prikaži QR</button>`:""}<button class="zel" onclick="placeno(${p.id})">✅ ${banka?"Plaćeno":"Naplaćeno kešom"}</button></div></div>`}
+async function prikaziQR(id,iznos){
+ const r=await sb.rpc("m_qr",{p_pin:PIN,p_id:id});
+ if(r.error||!r.data)return alert(r.error?r.error.message:"QR nije dostupan.");
+ $("qrslika").innerHTML="";
+ new QRCode($("qrslika"),{text:r.data,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
+ $("qrinfo").textContent="Iznos: "+Number(iznos).toLocaleString("sr-RS")+" din. Klijent skenira u aplikaciji svoje banke.";
+ $("qrm").style.display="flex";
+}
+async function placeno(id){
+ if(!confirm("Potvrđujete da je uplata primljena? QR kod će nestati."))return;
+ const r=await sb.rpc("m_placeno",{p_pin:PIN,p_id:id});if(r.error)alert(r.error.message);pozivi();
+}
+async function snimiUplatu(){
+ const r=await sb.rpc("m_uplata",{p_pin:PIN,p_naziv:$("u-naziv").value,p_racun:$("u-racun").value,p_mesto:$("u-mesto").value});
+ if(r.error)return alert(r.error.message);
+ alert("Podaci za uplatu sačuvani ✅");M.naziv_uplata=$("u-naziv").value;
+}
 const IZL={};
 function chip(id,i){IZL[id]=false;$("c"+id).value=cen[i].cena;$("o"+id).value=cen[i].naziv}
 function izlazak(id){IZL[id]=true;$("c"+id).value=IZLAZAK;$("o"+id).value="Samo izlazak majstora na teren"}
