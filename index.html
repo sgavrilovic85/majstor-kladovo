@@ -623,6 +623,8 @@ function renderM() {
     if(!m) { goM('home'); return; }
     const telClean = m.telefon.replace(/\D/g, '');
     const waNum = telClean.startsWith('0') ? '381' + telClean.slice(1) : telClean;
+    const poruka = `Zdravo ${m.ime}, tvoj nalog za Majstor na terenu – Kladovo je aktivan.\nPanel majstora: https://sgavrilovic85.github.io/majstor-kladovo/majstor.html\nTvoj PIN za ulaz: ${m.pin}`;
+    const porukaEnc = encodeURIComponent(poruka);
     container.innerHTML = `
       <button class="b-m ghost" onclick="goM('home')">‹ Nazad na listu</button>
       <h3 style="margin-top:14px;">${esc(m.ime)}</h3>
@@ -637,8 +639,10 @@ function renderM() {
         </div>
         ${m.napomena ? `<div style="color:var(--sv); font-size:14px;">Napomena</div><div>${esc(m.napomena)}</div>` : ''}
       </div>
-      <a class="b-m" href="tel:${esc(m.telefon)}">📞 Pozovi majstora</a>
-      <a class="b-m ghost" href="https://wa.me/${waNum}" target="_blank">💬 Pošalji WhatsApp poruku</a>
+      <a class="b-m ok" href="https://wa.me/${waNum}?text=${porukaEnc}" target="_blank">💬 Pošalji PIN na WhatsApp</a>
+      <a class="b-m" href="sms:${esc(m.telefon)}?&body=${porukaEnc}">📩 Pošalji PIN preko SMS-a</a>
+      <button class="b-m ghost" onclick="kopirajPinPoruku('${m.id}')">📋 Kopiraj poruku sa PIN-om (za Viber)</button>
+      <a class="b-m ghost" href="tel:${esc(m.telefon)}">📞 Pozovi majstora</a>
       <button class="b-m ghost" style="margin-top:12px;" onclick="noviPinMajstora('${m.id}')">🔑 Novi PIN za majstora</button>
       <div style="margin-top:20px;">
         <button class="b-m danger" onclick="delMajstorM('${m.id}')">${armedM == m.id ? 'Pritisnite opet za brisanje' : '🗑️ Obriši majstora'}</button>
@@ -656,7 +660,16 @@ function renderM() {
     `;
   }
 }
-
+function kopirajPinPoruku(id) {
+  const m = DM.majstori.find(x => x.id == id);
+  if (!m) return;
+  const tekst = `Zdravo ${m.ime}, tvoj nalog za Majstor na terenu – Kladovo je aktivan.\nPanel majstora: https://sgavrilovic85.github.io/majstor-kladovo/majstor.html\nTvoj PIN za ulaz: ${m.pin}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(tekst).then(() => alert('Poruka sa PIN-om je kopirana! Nalepite je majstoru na Viber.'));
+  } else {
+    prompt('Kopirajte ovu poruku i pošaljite majstoru:', tekst);
+  }
+}
 async function saveNewMajstor() {
   const ime = $('mn-ime').value.trim();
   const tel = $('mn-tel').value.trim();
