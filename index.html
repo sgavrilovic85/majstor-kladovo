@@ -34,8 +34,6 @@ main{max-width:560px;margin:0 auto;padding:12px}
 .kat img{width:100%;height:auto;display:block;border-radius:14px}
 .kat.on{border-color:var(--nar);box-shadow:0 0 0 2px #fff,0 3px 10px #f26a1b66}
 .kat.on::after{content:"✓";position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:var(--nar);color:#fff;font:700 18px/28px system-ui}
-.kat.ost{border:2px dashed #b9c2d6;background:#fff;padding:26px 4px;font-size:16px;line-height:1.3;align-self:stretch}
-.kat.ost span{display:block;font-size:34px}
 .hit{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .hit button{padding:12px 4px;border-radius:10px;border:2px solid #dde2ee;background:#fff;font-weight:600;font-size:13px}
 .hit button.on{border-color:var(--plava);background:#e9effc}
@@ -173,7 +171,7 @@ const sb=(SUPABASE_URL&&SUPABASE_KEY&&window.supabase)?supabase.createClient(SUP
 // Generisanje zanata u formi za prijavu saradnika
 $("sar-zanati").innerHTML = KATS.map(z => `<label class="zanat-cb"><input type="checkbox" value="${z[1]}"> ${z[1]}</label>`).join('');
 
-const OSTALO=document.createElement("button");OSTALO.className="kat ost";OSTALO.innerHTML="<span>🔧</span>Ostalo";
+const OSTALO=document.createElement("button");OSTALO.className="kat";OSTALO.setAttribute("aria-label","Ostalo");OSTALO.innerHTML='<img src="ostalo.webp" alt="Ostalo">';
 OSTALO.onclick=()=>{kat="Ostalo";document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));OSTALO.classList.add("on");pokaziSlob()};
 KATS.forEach(([i,n])=>{const b=document.createElement("button");b.className="kat";b.setAttribute("aria-label",n);b.innerHTML='<img src="'+i+'.webp" alt="'+n+'">';
  b.onclick=()=>{kat=n;document.querySelectorAll(".kat").forEach(x=>x.classList.remove("on"));b.classList.add("on");pokaziSlob()};$("kats").appendChild(b)});
